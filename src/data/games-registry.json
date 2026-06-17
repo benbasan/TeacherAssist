@@ -1,0 +1,14 @@
+[
+  {
+    "id": "demo-compliment-game",
+    "componentKey": "DemoComplimentGame",
+    "title": "פינת הפרגון",
+    "description": "משחק קצר ומחמם לב: כל פעם עולה שאלה מעוררת השראה, והתלמידים מפרגנים זה לזה. מצוין לפתיחת יום או לחיזוק האקלים הכיתתי.",
+    "category": "חברתי-רגשי",
+    "minAge": 6,
+    "maxAge": 12,
+    "icon": "🌟",
+    "color": "#3f51b5",
+    "dateAdded": "2026-06-17"
+  }
+]

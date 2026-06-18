@@ -14,40 +14,35 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import type { EducationalGame } from '../types/game.types';
 import registry from '../data/games-registry.json';
+import { subjectMeta, targetAgeLabel } from '../data/taxonomy';
 
 const games = registry as EducationalGame[];
 
 const ALL = 'all';
 
-// Age buckets used by the age filter.
-const AGE_BUCKETS = [
-  { value: ALL, label: 'כל הגילאים' },
-  { value: '4-6', label: '4–6', min: 4, max: 6 },
-  { value: '6-9', label: '6–9', min: 6, max: 9 },
-  { value: '9-12', label: '9–12', min: 9, max: 12 },
-  { value: '12-18', label: '12+', min: 12, max: 18 },
-];
-
 export default function CatalogPage() {
-  const [category, setCategory] = useState<string>(ALL);
-  const [ageBucket, setAgeBucket] = useState<string>(ALL);
+  const [subject, setSubject] = useState<string>(ALL);
+  const [targetAge, setTargetAge] = useState<string>(ALL);
 
-  const categories = useMemo(
-    () => [ALL, ...Array.from(new Set(games.map((g) => g.category)))],
+  // Filter options are derived from whatever games actually exist.
+  const subjects = useMemo(
+    () => Array.from(new Set(games.map((g) => g.subject))),
+    [],
+  );
+  const targetAges = useMemo(
+    () => Array.from(new Set(games.map((g) => g.targetAge))),
     [],
   );
 
-  const filtered = useMemo(() => {
-    const bucket = AGE_BUCKETS.find((b) => b.value === ageBucket);
-    return games.filter((g) => {
-      const byCategory = category === ALL || g.category === category;
-      const byAge =
-        !bucket || bucket.value === ALL
-          ? true
-          : g.minAge <= (bucket.max ?? 99) && g.maxAge >= (bucket.min ?? 0);
-      return byCategory && byAge;
-    });
-  }, [category, ageBucket]);
+  const filtered = useMemo(
+    () =>
+      games.filter((g) => {
+        const bySubject = subject === ALL || g.subject === subject;
+        const byAge = targetAge === ALL || g.targetAge === targetAge;
+        return bySubject && byAge;
+      }),
+    [subject, targetAge],
+  );
 
   return (
     <Container maxWidth="lg" sx={{ py: 5 }}>
@@ -67,27 +62,29 @@ export default function CatalogPage() {
       >
         <TextField
           select
-          label="קטגוריה"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          label="תחום"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
           fullWidth
         >
-          {categories.map((c) => (
-            <MenuItem key={c} value={c}>
-              {c === ALL ? 'כל הקטגוריות' : c}
+          <MenuItem value={ALL}>כל התחומים</MenuItem>
+          {subjects.map((s) => (
+            <MenuItem key={s} value={s}>
+              {subjectMeta(s).label}
             </MenuItem>
           ))}
         </TextField>
         <TextField
           select
-          label="גיל"
-          value={ageBucket}
-          onChange={(e) => setAgeBucket(e.target.value)}
+          label="שכבת גיל"
+          value={targetAge}
+          onChange={(e) => setTargetAge(e.target.value)}
           fullWidth
         >
-          {AGE_BUCKETS.map((b) => (
-            <MenuItem key={b.value} value={b.value}>
-              {b.label}
+          <MenuItem value={ALL}>כל השכבות</MenuItem>
+          {targetAges.map((a) => (
+            <MenuItem key={a} value={a}>
+              {targetAgeLabel(a)}
             </MenuItem>
           ))}
         </TextField>
@@ -95,7 +92,7 @@ export default function CatalogPage() {
 
       {filtered.length === 0 ? (
         <Typography variant="h6" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
-          לא נמצאו משחקים שמתאימים לסינון. נסו לשנות את הקטגוריה או הגיל 🙂
+          לא נמצאו משחקים שמתאימים לסינון. נסו לשנות את התחום או הגיל 🙂
         </Typography>
       ) : (
         <Box
@@ -109,44 +106,48 @@ export default function CatalogPage() {
             },
           }}
         >
-          {filtered.map((game) => (
-            <Card
-              key={game.id}
-              elevation={3}
-              sx={{
-                height: '100%',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
-                borderTop: `6px solid ${game.color}`,
-              }}
-            >
-              <CardActionArea
-                component={RouterLink}
-                to={`/game/${game.id}`}
-                sx={{ height: '100%', alignItems: 'stretch' }}
+          {filtered.map((game) => {
+            const subjectInfo = subjectMeta(game.subject);
+            return (
+              <Card
+                key={game.id}
+                elevation={3}
+                sx={{
+                  height: '100%',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
+                  borderTop: `6px solid ${subjectInfo.color}`,
+                }}
               >
-                <CardContent>
-                  <Typography sx={{ fontSize: 48, lineHeight: 1, mb: 1 }}>
-                    {game.icon}
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                    {game.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {game.description}
-                  </Typography>
-                  <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                    <Chip label={game.category} color="primary" size="small" />
-                    <Chip
-                      label={`גילאי ${game.minAge}–${game.maxAge}`}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
+                <CardActionArea
+                  component={RouterLink}
+                  to={`/game/${game.id}`}
+                  sx={{ height: '100%', alignItems: 'stretch' }}
+                >
+                  <CardContent>
+                    <Typography sx={{ fontSize: 48, lineHeight: 1, mb: 1 }}>
+                      {subjectInfo.icon}
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                      {game.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {game.description}
+                    </Typography>
+                    <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                      <Chip label={subjectInfo.label} color="primary" size="small" />
+                      <Chip label={targetAgeLabel(game.targetAge)} variant="outlined" size="small" />
+                      <Chip
+                        label={`כ-${game.estimatedTimeMinutes} דק׳`}
+                        variant="outlined"
+                        size="small"
+                      />
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            );
+          })}
         </Box>
       )}
     </Container>

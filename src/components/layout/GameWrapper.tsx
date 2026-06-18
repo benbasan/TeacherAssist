@@ -3,6 +3,7 @@ import { Box, Container, Paper, Typography, Button, Chip, Stack } from '@mui/mat
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { Link as RouterLink } from 'react-router-dom';
 import type { EducationalGame } from '../../types/game.types';
+import { subjectMeta } from '../../data/taxonomy';
 
 interface GameWrapperProps {
   game: EducationalGame;
@@ -11,6 +12,8 @@ interface GameWrapperProps {
 
 /** Shared frame around every game: title, metadata, back button, padded surface. */
 export default function GameWrapper({ game, children }: GameWrapperProps) {
+  const subject = subjectMeta(game.subject);
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Stack
@@ -20,12 +23,12 @@ export default function GameWrapper({ game, children }: GameWrapperProps) {
       >
         <Box>
           <Typography variant="h4" color="primary.dark" sx={{ fontWeight: 800 }}>
-            <span style={{ marginInlineEnd: 8 }}>{game.icon}</span>
+            <span style={{ marginInlineEnd: 8 }}>{subject.icon}</span>
             {game.title}
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-            <Chip label={game.category} color="secondary" size="small" />
-            <Chip label={`גילאי ${game.minAge}–${game.maxAge}`} variant="outlined" size="small" />
+            <Chip label={subject.label} color="secondary" size="small" />
+            <Chip label={`כ-${game.estimatedTimeMinutes} דק׳`} variant="outlined" size="small" />
           </Stack>
         </Box>
         <Button

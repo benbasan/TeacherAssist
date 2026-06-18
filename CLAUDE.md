@@ -25,9 +25,10 @@ can open and run in front of a class within seconds.
 
 ## DATA FLOW
 - **All games are entries in `src/data/games-registry.json`.** This registry is the single source of
-  truth for what games exist, their metadata (category, age range, color, icon), and their
-  `componentKey`.
-- A `componentKey` maps to a React component via the **Registry Map** in `src/pages/GamePage.tsx`.
+  truth for what games exist, their metadata (`subject`, `targetAge`, `estimatedTimeMinutes`), and
+  their `componentName`. Display labels/icons/colors for `subject`/`targetAge` live in
+  `src/data/taxonomy.ts`, not on each entry.
+- A `componentName` maps to a React component via the **Registry Map** in `src/pages/GamePage.tsx`.
 - **Any new game MUST be added to BOTH** `games-registry.json` **and** `src/data/whats-new.json`.
 - Pages render purely from this data — never hard-code a game list in a component.
 - **See `ARCHITECTURE.md`** for the full system blueprint: the application shell, dynamic routing,

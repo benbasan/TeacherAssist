@@ -1,14 +1,29 @@
 [
   {
-    "id": "demo-compliment-game",
-    "componentKey": "DemoComplimentGame",
-    "title": "פינת הפרגון",
-    "description": "משחק קצר ומחמם לב: כל פעם עולה שאלה מעוררת השראה, והתלמידים מפרגנים זה לזה. מצוין לפתיחת יום או לחיזוק האקלים הכיתתי.",
-    "category": "חברתי-רגשי",
-    "minAge": 6,
-    "maxAge": 12,
-    "icon": "🌟",
-    "color": "#3f51b5",
-    "dateAdded": "2026-06-17"
+    "id": "compliment-pack",
+    "title": "ספיישל סוף שנה: ערכת משחקי הפרגונים",
+    "description": "3 משחקים חברתיים דינמיים במוצר אחד: שרשרת פרגונים, הצמד המנצח ומכונת המזל של המילים הטובות. משחק חובה לסיכום שנה מעצים ובלתי נשכח!",
+    "targetAge": "elementary_low",
+    "subject": "social",
+    "estimatedTimeMinutes": 20,
+    "componentName": "ComplimentGamePack"
+  },
+  {
+    "id": "math-codebreaker",
+    "title": "פיצוח הקוד המתמטי",
+    "description": "הכספת הכיתתית נעולה! פתרו את חידות החשבון, חשפו את 4 ספרות הקוד ופתחו את הכספת. משחק אינטראקטיבי מעולה לתרגול חווייתי של לוח הכפל ופעולות חשבון.",
+    "targetAge": "elementary_high",
+    "subject": "math",
+    "estimatedTimeMinutes": 15,
+    "componentName": "MathCodebreaker"
+  },
+  {
+    "id": "social-dilemmas",
+    "title": "מה הייתם עושים? מרוץ הדילמות",
+    "description": "משחק חברתי מרתק לשעת מחנך. הכיתה מתמודדת עם דילמות אמיתיות מחצר בית הספר, קבוצות הווטסאפ וערכי החברות, ומקבלת החלטות שמפתחות אמפתיה ודיון משותף.",
+    "targetAge": "elementary_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 20,
+    "componentName": "SocialDilemmas"
   }
 ]

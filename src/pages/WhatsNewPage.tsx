@@ -22,11 +22,6 @@ function formatDate(iso: string): string {
   return `${day}.${month}.${year}`;
 }
 
-const TYPE_LABEL: Record<WhatsNewEntry['type'], string> = {
-  new: 'משחק חדש',
-  update: 'עדכון',
-};
-
 export default function WhatsNewPage() {
   // Newest first.
   const sorted = useMemo(
@@ -83,7 +78,7 @@ export default function WhatsNewPage() {
                     width: 16,
                     height: 16,
                     borderRadius: '50%',
-                    bgcolor: entry.type === 'new' ? 'secondary.main' : 'primary.main',
+                    bgcolor: 'secondary.main',
                     border: '3px solid',
                     borderColor: 'background.default',
                   }}
@@ -97,8 +92,8 @@ export default function WhatsNewPage() {
                   >
                     <Chip
                       icon={<AutoAwesomeRoundedIcon />}
-                      label={TYPE_LABEL[entry.type]}
-                      color={entry.type === 'new' ? 'secondary' : 'primary'}
+                      label="חדש"
+                      color="secondary"
                       size="small"
                     />
                     <Typography variant="body2" color="text.secondary">
@@ -110,7 +105,7 @@ export default function WhatsNewPage() {
                     {entry.title}
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                    {entry.description}
+                    {entry.shortDescription}
                   </Typography>
 
                   {entry.gameId && (

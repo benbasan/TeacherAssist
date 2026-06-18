@@ -5,16 +5,20 @@ import SentimentDissatisfiedRoundedIcon from '@mui/icons-material/SentimentDissa
 import type { EducationalGame } from '../types/game.types';
 import registry from '../data/games-registry.json';
 import GameWrapper from '../components/layout/GameWrapper';
-import DemoComplimentGame from '../games/DemoComplimentGame';
+import ComplimentGamePack from '../games/ComplimentGamePack';
+import MathCodebreaker from '../games/MathCodebreaker';
+import SocialDilemmas from '../games/SocialDilemmas';
 
 const games = registry as EducationalGame[];
 
 /**
- * Registry Map: connects a game's `componentKey` to its React component.
+ * Registry Map: connects a game's `componentName` to its React component.
  * Every new game in `/src/games` must be registered here.
  */
 const REGISTRY_MAP: Record<string, ComponentType> = {
-  DemoComplimentGame: DemoComplimentGame,
+  ComplimentGamePack: ComplimentGamePack,
+  MathCodebreaker: MathCodebreaker,
+  SocialDilemmas: SocialDilemmas,
 };
 
 function NotFound({ message }: { message: string }) {
@@ -41,7 +45,7 @@ export default function GamePage() {
     return <NotFound message="אופס! לא מצאנו את המשחק הזה." />;
   }
 
-  const GameComponent = REGISTRY_MAP[game.componentKey];
+  const GameComponent = REGISTRY_MAP[game.componentName];
   if (!GameComponent) {
     return <NotFound message="המשחק קיים בקטלוג אך עדיין לא חובר. נתראה בקרוב!" />;
   }

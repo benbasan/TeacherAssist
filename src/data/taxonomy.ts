@@ -16,6 +16,7 @@ export const SUBJECTS: Record<string, SubjectMeta> = {
   thinking: { label: 'חשיבה', icon: '🧩', color: '#ab47bc' },
   math: { label: 'חשבון', icon: '🔢', color: '#ef5350' },
   science: { label: 'מדעים', icon: '🔬', color: '#42a5f5' },
+  focus: { label: 'קשב ורוגע', icon: '🧘', color: '#10b981' },
 };
 
 /** Fallback used when a subject key isn't in the map. */

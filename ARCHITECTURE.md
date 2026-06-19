@@ -43,7 +43,8 @@ src/
 ├── games/
 │   ├── ComplimentGamePack.tsx  # 3-mode game pack (internal state machine; see §4a)
 │   ├── MathCodebreaker.tsx     # Math vault game (state machine: difficulty→game→unlocked; §4a)
-│   └── SocialDilemmas.tsx      # SEL dilemmas (topic→scenario→consequence→summary; §4a)
+│   ├── SocialDilemmas.tsx      # SEL dilemmas (topic→scenario→consequence→summary; §4a)
+│   └── FocusDetectivesGame.tsx # Focus capsule (intro→playing[memorize/blink/recall/feedback]→summary; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
@@ -167,6 +168,16 @@ consequences, and an `Alert` with 2 teacher discussion questions. After the 3rd 
 summary (message tiered by final empathy + confetti). All dilemma content is an in-component
 constant (`TOPICS`); no data-registry change beyond the single game entry.
 
+**Fourth example — `FocusDetectivesGame.tsx`** (smartboard "focus capsule") nests a per-round
+step machine inside the top phase machine. `phase` is `'INTRO' | 'PLAYING' | 'SUMMARY'`; INTRO
+offers an optional 15s silence countdown. PLAYING runs 3 rounds, each cycling a `step`
+`'MEMORIZE' (5s) → 'BLINK' (1s) → 'RECALL' → 'FEEDBACK'`: a 3×3 emoji grid is shown to
+memorize, hidden during a "blink," then re-shown with exactly one cell altered (emoji **or**
+color — single-cell so the tap target is unambiguous). SUMMARY celebrates (confetti) and runs a
+30s guided breathing animation (CSS `@keyframes` scale loop + alternating שואפים/נושפים text).
+All timers use `useRef` + `useEffect` cleanup keyed on `(round, step)`. Round content is an
+in-component `ROUNDS` constant.
+
 ---
 
 ## 5. Data Flow (Single Source of Truth)
@@ -259,3 +270,9 @@ Append a dated entry here for every significant technical decision.
   (topic→scenario→consequence→summary) with `empathy` clamped 0–100 and gently animated on the
   consequence screen; dilemma content lives in an in-component `TOPICS` constant (no data-file
   branching). Reuses `taxonomy.ts` (`social` / `elementary_high`) — additive, no schema change.
+- **2026-06-19 — Added `FocusDetectivesGame` (4th game) + new `focus` subject.**
+  *Why:* a smartboard calming/attention "capsule" doesn't fit any existing subject. *How:*
+  added a `focus` subject (`קשב ורוגע`, 🧘, emerald) to `taxonomy.ts` — the §5-checklist
+  "new subject" path, additive with no schema change. The game follows §4a with a nested
+  per-round step machine and timer cleanup via `useEffect`; built for touch (large targets, no
+  hover dependence) per the brief.

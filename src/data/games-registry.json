@@ -25,5 +25,14 @@
     "subject": "social",
     "estimatedTimeMinutes": 20,
     "componentName": "SocialDilemmas"
+  },
+  {
+    "id": "focus-detectives",
+    "title": "בלשי הקשב: אתגר ה-3 דקות",
+    "description": "כמוסת קשב לכיתה: 3 סיבובי זיכרון של 'מצאו את ההבדל' שמרגיעים וממקדים את הקשב, ומסתיימים בתרגיל נשימה משותף — מושלם לפתיחת שיעור.",
+    "targetAge": "elementary_low",
+    "subject": "focus",
+    "estimatedTimeMinutes": 3,
+    "componentName": "FocusDetectivesGame"
   }
 ]

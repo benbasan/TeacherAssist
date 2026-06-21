@@ -34,5 +34,14 @@
     "subject": "focus",
     "estimatedTimeMinutes": 3,
     "componentName": "FocusDetectivesGame"
+  },
+  {
+    "id": "spot-the-glitch",
+    "title": "עצור! יש טעות בשפה",
+    "description": "האם התלמידים שלכם הם בלשי שפה אמיתיים? משחק קריאה והקשבה אקטיבי שבו הכיתה צריכה לתפוס על חם שגיאות כתיב, בלבולי זכר ונקבה וביטויים משובשים.",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 12,
+    "componentName": "SpotTheGlitch"
   }
 ]

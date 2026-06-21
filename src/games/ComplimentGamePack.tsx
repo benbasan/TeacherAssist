@@ -12,13 +12,22 @@ import {
   Stack,
   Chip,
   LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 import Diversity3RoundedIcon from '@mui/icons-material/Diversity3Rounded';
 import CasinoRoundedIcon from '@mui/icons-material/CasinoRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import { useClassrooms } from '../context/ClassroomContext';
+import { parseNames } from '../utils/parseNames';
 
 // ---------------------------------------------------------------------------
 // Shared data & helpers
@@ -43,20 +52,6 @@ const PAIR_PROMPTS: string[] = [
   'על מה תרצו להודות זה לזה?',
   'מה למדתם אחד מהשני?',
 ];
-
-/** Splits a raw textarea value into a clean, de-duplicated list of names. */
-function parseNames(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(/[,\n]/)) {
-    const name = part.trim();
-    if (name && !seen.has(name)) {
-      seen.add(name);
-      out.push(name);
-    }
-  }
-  return out;
-}
 
 /** Fisher–Yates shuffle (returns a new array). */
 function shuffle<T>(arr: T[]): T[] {
@@ -128,9 +123,20 @@ function NamesInput({
   initial: string[];
   onStart: (names: string[]) => void;
 }) {
+  const { classrooms, isSignedIn } = useClassrooms();
   const [raw, setRaw] = useState(initial.join('\n'));
   const parsed = parseNames(raw);
   const tooFew = parsed.length < 2;
+
+  const hasSavedClasses = isSignedIn && classrooms.length > 0;
+
+  // Selecting a saved class hydrates the roster and starts the game instantly.
+  const pickClassroom = (e: SelectChangeEvent) => {
+    const classroom = classrooms.find((c) => c.id === e.target.value);
+    if (classroom && classroom.students.length >= 2) {
+      onStart(classroom.students);
+    }
+  };
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -155,6 +161,30 @@ function NamesInput({
             הקלידו או הדביקו את שמות התלמידים (מופרדים בפסיק או בשורה חדשה), ובחרו אחד
             משלושת המשחקים.
           </Typography>
+
+          {hasSavedClasses && (
+            <>
+              <FormControl fullWidth>
+                <InputLabel id="classroom-select-label">בחר כיתה מהרשימה שלך</InputLabel>
+                <Select
+                  labelId="classroom-select-label"
+                  label="בחר כיתה מהרשימה שלך"
+                  value=""
+                  onChange={pickClassroom}
+                  startAdornment={<GroupsRoundedIcon sx={{ ml: 1, color: 'action.active' }} />}
+                >
+                  {classrooms.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>
+                      {`${c.name} (${c.students.length} תלמידים)`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Divider flexItem sx={{ '&::before, &::after': { borderColor: 'divider' } }}>
+                או הזינו ידנית
+              </Divider>
+            </>
+          )}
 
           <TextField
             label="שמות התלמידים"

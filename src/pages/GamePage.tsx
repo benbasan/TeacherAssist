@@ -9,6 +9,7 @@ import ComplimentGamePack from '../games/ComplimentGamePack';
 import MathCodebreaker from '../games/MathCodebreaker';
 import SocialDilemmas from '../games/SocialDilemmas';
 import FocusDetectivesGame from '../games/FocusDetectivesGame';
+import SpotTheGlitch from '../games/SpotTheGlitch';
 
 const games = registry as EducationalGame[];
 
@@ -21,6 +22,7 @@ const REGISTRY_MAP: Record<string, ComponentType> = {
   MathCodebreaker: MathCodebreaker,
   SocialDilemmas: SocialDilemmas,
   FocusDetectivesGame: FocusDetectivesGame,
+  SpotTheGlitch: SpotTheGlitch,
 };
 
 function NotFound({ message }: { message: string }) {

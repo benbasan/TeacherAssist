@@ -13,6 +13,7 @@ interface SubjectMeta {
 export const SUBJECTS: Record<string, SubjectMeta> = {
   social: { label: 'חברתי-רגשי', icon: '💛', color: '#26a69a' },
   language: { label: 'שפה', icon: '📚', color: '#5c6bc0' },
+  hebrew: { label: 'עברית ושפה', icon: '📖', color: '#7e57c2' },
   thinking: { label: 'חשיבה', icon: '🧩', color: '#ab47bc' },
   math: { label: 'חשבון', icon: '🔢', color: '#ef5350' },
   science: { label: 'מדעים', icon: '🔬', color: '#42a5f5' },

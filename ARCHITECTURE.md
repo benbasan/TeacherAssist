@@ -22,8 +22,12 @@ classroom. The entire UI is **RTL / Hebrew**.
 | RTL            | `@emotion/cache` + `stylis` `prefixer` + `stylis-plugin-rtl` |
 | Routing        | `react-router-dom` v7 (`BrowserRouter`) |
 | Celebration FX | `canvas-confetti` |
+| Auth + storage | **Clerk** (`@clerk/clerk-react`) — auth UI + per-user cloud data via `unsafeMetadata` |
 
 Entry: `index.html` (`<html lang="he" dir="rtl">`) → `src/main.tsx` → `src/App.tsx`.
+
+> **Env requirement:** Clerk needs `VITE_CLERK_PUBLISHABLE_KEY` (a `pk_…` key) in `.env`. The app
+> *builds* without it but only *runs* once it is set.
 
 ---
 
@@ -34,8 +38,12 @@ src/
 ├── App.tsx                     # Application shell: providers + router (route table)
 ├── main.tsx                    # React root render
 ├── components/layout/
-│   ├── Navbar.tsx              # Sticky AppBar; links to "/" and "/whats-new"
+│   ├── Navbar.tsx              # Sticky AppBar; nav links + Clerk auth controls (SignIn/UserButton, "הכיתות שלי")
 │   └── GameWrapper.tsx         # Shared frame around every game (title, chips, back button)
+├── context/
+│   └── ClassroomContext.tsx    # Multi-classroom state/cloud layer (Clerk unsafeMetadata; see §8)
+├── utils/
+│   └── parseNames.ts           # Shared roster parser (textarea → clean name list)
 ├── data/
 │   ├── games-registry.json     # SOURCE OF TRUTH: all games + metadata + componentName
 │   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries
@@ -44,10 +52,12 @@ src/
 │   ├── ComplimentGamePack.tsx  # 3-mode game pack (internal state machine; see §4a)
 │   ├── MathCodebreaker.tsx     # Math vault game (state machine: difficulty→game→unlocked; §4a)
 │   ├── SocialDilemmas.tsx      # SEL dilemmas (topic→scenario→consequence→summary; §4a)
-│   └── FocusDetectivesGame.tsx # Focus capsule (intro→playing[memorize/blink/recall/feedback]→summary; §4a)
+│   ├── FocusDetectivesGame.tsx # Focus capsule (intro→playing[memorize/blink/recall/feedback]→summary; §4a)
+│   └── SpotTheGlitch.tsx       # Hebrew "spot the error" game (topic→board→reveal→summary; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
+│   ├── DashboardPage.tsx       # Teacher workspace: create/edit/delete saved classrooms (SignedIn)
 │   └── WhatsNewPage.tsx        # Timeline rendered from whats-new.json
 ├── theme/
 │   ├── educationalTheme.ts     # MUI theme (indigo/teal, Rubik, rtl, borderRadius 16)
@@ -63,21 +73,29 @@ src/
 `src/App.tsx` composes the app as nested providers around the router:
 
 ```
-<CacheProvider value={rtlCache}>        // RTL-correct CSS emission
-  <ThemeProvider theme={educationalTheme}>
-    <CssBaseline />
-    <BrowserRouter>
-      <Navbar />
-      <Routes>
-        "/"              → <CatalogPage />
-        "/game/:gameId"  → <GamePage />
-        "/whats-new"     → <WhatsNewPage />
-        "*"              → <Navigate to="/" replace />   // unknown path → catalog
-      </Routes>
-    </BrowserRouter>
-  </ThemeProvider>
-</CacheProvider>
+<ClerkProvider publishableKey={VITE_CLERK_PUBLISHABLE_KEY}>   // auth + per-user cloud storage
+  <CacheProvider value={rtlCache}>      // RTL-correct CSS emission
+    <ThemeProvider theme={educationalTheme}>
+      <CssBaseline />
+      <ClassroomProvider>               // classroom state, inside Clerk so it can read useUser() (§8)
+        <BrowserRouter>
+          <Navbar />
+          <Routes>
+            "/"              → <CatalogPage />
+            "/game/:gameId"  → <GamePage />
+            "/dashboard"     → <DashboardPage />   // teacher's saved classes (SignedIn-gated)
+            "/whats-new"     → <WhatsNewPage />
+            "*"              → <Navigate to="/" replace />   // unknown path → catalog
+          </Routes>
+        </BrowserRouter>
+      </ClassroomProvider>
+    </ThemeProvider>
+  </CacheProvider>
+</ClerkProvider>
 ```
+
+- **Why `ClassroomProvider` sits *inside* `ClerkProvider`:** the classroom layer calls Clerk's
+  `useUser()` to read/write `unsafeMetadata`, so it must have a `ClerkProvider` ancestor.
 
 - **Why `BrowserRouter`:** clean history-API URLs; routing is fully client-side.
 - **Why a `:gameId` param:** games are data, not code-defined routes. A single dynamic
@@ -178,6 +196,21 @@ color — single-cell so the tap target is unambiguous). SUMMARY celebrates (con
 All timers use `useRef` + `useEffect` cleanup keyed on `(round, step)`. Round content is an
 in-component `ROUNDS` constant.
 
+**Fifth example — `SpotTheGlitch.tsx`** (Hebrew language-arts "spot the error" game) is a frontal
+reading/listening game: the teacher reads a sentence and the class shouts "stop!" when they catch a
+planted mistake. `stage` is `'topic' | 'board' | 'reveal' | 'summary'`. The **topic** screen offers
+3 Hebrew sub-categories (`grammar` — זכר/נקבה ומספרים, `spelling` — בלשי כתיב, `idioms` — ניבים
+משובשים); picking one loads its sentence list and resets the index. The **board** screen shows a
+`LinearProgress` "משפט X מתוך N" indicator, a big-typography `Card` with the current sentence, and
+two action buttons: "המשפט תקין 👍" and "עצור! יש טעות 🛑". Pressing "תקין" on a glitched sentence
+shows a gentle inline tip and stays put; otherwise the choice moves to the **reveal** screen, which
+uses an `Alert` to say whether the class was right and — for a correctly-caught glitch — renders the
+`correction`, strikes the original with `textDecoration: 'line-through'`, and fires confetti via
+`useEffect`. After the last sentence → **summary** (praises the class as "בלשי השפה העברית" +
+confetti). All content is an in-component `TOPICS` constant; each item is a localized
+`{ text, hasGlitch, correction }` record. Uses the new `hebrew` subject (see §5) — additive, no
+schema change.
+
 ---
 
 ## 5. Data Flow (Single Source of Truth)
@@ -225,7 +258,34 @@ Consumers (all render purely from data — never hard-code a game list):
 
 ---
 
-## 7. Decision Log ("Why / How")
+## 7. Serverless Cloud Data Flow (Clerk `unsafeMetadata`)
+
+**Multi-Classroom Management** lets a signed-in teacher save named classes (each a list of student
+names) and reuse them across roster-based games — with **no backend**. Clerk provides both auth and
+per-user cloud storage:
+
+- **Storage:** each teacher's classes live in `user.unsafeMetadata.classrooms` — an array of
+  `Classroom { id, name, students: string[] }`. `unsafeMetadata` is the **client-writable** Clerk
+  metadata bucket (writable straight from the browser via `user.update(...)`), which is exactly why
+  it fits a serverless model. It is "unsafe" only in that the client can write it; that is
+  acceptable here because class rosters are non-sensitive.
+- **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
+  place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
+  (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
+  stale) and exposes async `addClassroom` / `updateClassroom` / `removeClassroom`, each of which
+  rewrites the whole `classrooms` array via
+  `user.update({ unsafeMetadata: { ...user.unsafeMetadata, classrooms: next } })`.
+- **Consumers:** `DashboardPage` (full CRUD UI) and `ComplimentGamePack`'s `NamesInput` (a
+  "בחר כיתה" `Select` that hydrates the roster instantly). **Only `ComplimentGamePack` consumes a
+  roster** — `MathCodebreaker`, `SocialDilemmas`, and `SpotTheGlitch` have no student-name input, so
+  they are intentionally left without a class selector (no dead UI).
+- **Auth UI:** the Navbar uses Clerk's `<SignedIn>/<SignedOut>`, `<SignInButton>`, and
+  `<UserButton>`. `UserButton` is Clerk's own widget — the single deliberate exception to the
+  "MUI for all UI" guideline (everything else stays MUI).
+
+---
+
+## 8. Decision Log ("Why / How")
 
 Append a dated entry here for every significant technical decision.
 
@@ -276,3 +336,22 @@ Append a dated entry here for every significant technical decision.
   "new subject" path, additive with no schema change. The game follows §4a with a nested
   per-round step machine and timer cleanup via `useEffect`; built for touch (large targets, no
   hover dependence) per the brief.
+- **2026-06-21 — Added `SpotTheGlitch` (5th game) + new `hebrew` subject.**
+  *Why:* a Hebrew language-arts game (spotting gender/number, spelling, and idiom errors) deserves
+  its own subject identity in the catalog rather than being folded into the generic `language`
+  bucket. *How:* added a `hebrew` subject (`עברית ושפה`, 📖, purple) to `taxonomy.ts` — the
+  §5-checklist "new subject" path, additive with no schema change. The game follows §4a
+  (topic→board→reveal→summary); all sentence content lives in an in-component `TOPICS` constant of
+  localized `{ text, hasGlitch, correction }` records, so no data-file branching beyond the single
+  registry entry.
+- **2026-06-21 — Multi-Classroom Management via Clerk `unsafeMetadata` (serverless cloud data).**
+  *Why:* teachers re-type rosters every session; we wanted saved, reusable classes with **zero
+  backend**. Clerk provides auth + per-user storage out of the box, and `unsafeMetadata` is writable
+  straight from the client — ideal for non-sensitive roster data, no API/DB to run. *How:* added
+  `@clerk/clerk-react`; `ClerkProvider` wraps the app (key via `VITE_CLERK_PUBLISHABLE_KEY`), with
+  `ClassroomProvider` nested inside it (§3, §7) as the single read/write layer over
+  `user.unsafeMetadata.classrooms`; new `/dashboard` route for CRUD. *Scope choices:* the
+  "בחר כיתה" selector is added **only** to `ComplimentGamePack` (the lone roster game) — the other
+  three games have no roster concept, so a selector there would be dead UI. `UserButton` is the one
+  accepted non-MUI widget. `parseNames` was extracted to `src/utils/parseNames.ts` so the dashboard
+  and the game share one parser.

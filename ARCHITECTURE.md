@@ -57,7 +57,8 @@ src/
 │   ├── MathCodebreaker.tsx     # Math vault game (state machine: difficulty→game→unlocked; §4a)
 │   ├── SocialDilemmas.tsx      # SEL dilemmas (topic→scenario→consequence→summary; §4a)
 │   ├── FocusDetectivesGame.tsx # Focus capsule (intro→playing[memorize/blink/recall/feedback]→summary; §4a)
-│   └── SpotTheGlitch.tsx       # Hebrew "spot the error" game (topic→board→reveal→summary; §4a)
+│   ├── SpotTheGlitch.tsx       # Hebrew "spot the error" game (topic→board→reveal→summary; §4a)
+│   └── WordPop.tsx             # English vocab arcade: float-up bubbles, pop the category (setup→playing→over; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
@@ -232,6 +233,25 @@ confetti). All content is an in-component `TOPICS` constant; each item is a loca
 `{ text, hasGlitch, correction }` record. Uses the new `hebrew` subject (see §5) — additive, no
 schema change.
 
+**Sixth example — `WordPop.tsx`** (English-vocabulary smartboard arcade) is the first **real-time
+animated** game and the first to drive state from timers rather than discrete user steps. `stage` is
+`'setup' | 'playing' | 'over'`. **setup** offers 3 category `Card`s (`animals` / `food` / `colors`,
+content in an in-component `CATEGORIES` constant of `{ en, he }` word lists). **playing** runs three
+loops set up in a single `useEffect` keyed on `[stage, category]` and torn down in its cleanup: a
+~50ms **float tick** (`setInterval`) advancing each bubble's `progress` (`bottom %`), a 1s
+**countdown** from 90, and a recursive `setTimeout` **spawner** (every 2–3s) that emits a bubble
+whose word is ~50% from the target category (`isCorrect`) and ~50% a distractor from the other
+categories. Bubbles live in a `bubbles: Bubble[]` state array —
+`{ id, text, he, x (5–90%), speed, progress (0→100), isCorrect, color, status: 'floating'|'popped'|'rock' }`
+— written through a single `writeBubbles` helper that keeps a `bubblesRef` mirror in sync so the tick
+reads fresh state without re-subscribing the interval. The float tick removes bubbles crossing the
+top and **deducts a life** for each *correct* one that escaped (a missed chance). Clicking a bubble:
+correct → `popped` (scale-up/fade) + `+100` + a transient `DOG → כלב!` flash banner; incorrect →
+`rock` (gray, drops) + `-1` life. The game ends when `timeLeft` or `lives` hit 0 → **over** (summary
+`Paper` + `confetti`). Records the play via the shared `useMarkGamePlayed(gameId, stage === 'over')`
+hook (§7). English text is wrapped in `dir="ltr"` inside the RTL shell. Uses the new `english` subject
+(see §5) — additive, no schema change.
+
 ---
 
 ## 5. Data Flow (Single Source of Truth)
@@ -394,6 +414,15 @@ Append a dated entry here for every significant technical decision.
   three games have no roster concept, so a selector there would be dead UI. `UserButton` is the one
   accepted non-MUI widget. `parseNames` was extracted to `src/utils/parseNames.ts` so the dashboard
   and the game share one parser.
+- **2026-06-21 — Added `WordPop` (6th game, "מפצחי בועות המילים") + new `english` subject.**
+  *Why:* the catalog had no English-vocabulary game and no real-time/arcade format; a timed
+  "pop the right category" game fits the smartboard and exercises fast recall. *How:* §4a state
+  machine (`setup→playing→over`) but **timer-driven** — three loops (50ms float tick, 1s countdown,
+  2–3s recursive spawner) set up/torn down in one `useEffect`, with a `bubbles[]` state array mirrored
+  by a `bubblesRef` so the tick reads fresh state without re-subscribing (see §4a for the bubble
+  shape). Records itself via the shared `useMarkGamePlayed` hook (§7) and fires `confetti` on game
+  over. Added an `english` subject (`אנגלית`, 🔤, amber `#ff9800`) to `taxonomy.ts` — the §5-checklist
+  "new subject" path, additive with no schema change. English copy is wrapped in `dir="ltr"`.
 - **2026-06-21 — Classroom-first session flow (gateway + attendance sidebar + game history).**
   *Why:* the app should open around a **teaching session**, not a generic catalog — the teacher
   picks which class they're teaching first, manages live attendance, and sees which games a class

@@ -43,5 +43,14 @@
     "subject": "hebrew",
     "estimatedTimeMinutes": 12,
     "componentName": "SpotTheGlitch"
+  },
+  {
+    "id": "english-word-pop",
+    "title": "מפצחי בועות המילים",
+    "description": "משחק קצב ואוצר מילים באנגלית ללוח החכם! בועות עם מילים באנגלית צפות על המסך, והכיתה צריכה לפוצץ רק את המילים ששייכות לקטגוריה הנכונה לפני שהזמן ייגמר.",
+    "targetAge": "elementary_high",
+    "subject": "english",
+    "estimatedTimeMinutes": 7,
+    "componentName": "WordPop"
   }
 ]

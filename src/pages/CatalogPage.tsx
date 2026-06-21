@@ -15,6 +15,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import type { EducationalGame } from '../types/game.types';
 import registry from '../data/games-registry.json';
 import { subjectMeta, targetAgeLabel } from '../data/taxonomy';
+import { useClassrooms } from '../context/ClassroomContext';
 
 const games = registry as EducationalGame[];
 
@@ -23,6 +24,7 @@ const ALL = 'all';
 export default function CatalogPage() {
   const [subject, setSubject] = useState<string>(ALL);
   const [targetAge, setTargetAge] = useState<string>(ALL);
+  const { activeClassroom } = useClassrooms();
 
   // Filter options are derived from whatever games actually exist.
   const subjects = useMemo(
@@ -108,17 +110,34 @@ export default function CatalogPage() {
         >
           {filtered.map((game) => {
             const subjectInfo = subjectMeta(game.subject);
+            const alreadyPlayed = Boolean(activeClassroom?.playedGames.includes(game.id));
             return (
               <Card
                 key={game.id}
                 elevation={3}
                 sx={{
+                  position: 'relative',
                   height: '100%',
                   transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                   '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
                   borderTop: `6px solid ${subjectInfo.color}`,
                 }}
               >
+                {alreadyPlayed && (
+                  <Chip
+                    label="שוחק כבר בכיתה זו 👍"
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 12,
+                      insetInlineStart: 12,
+                      zIndex: 1,
+                      bgcolor: '#10b981',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                    }}
+                  />
+                )}
                 <CardActionArea
                   component={RouterLink}
                   to={`/game/${game.id}`}

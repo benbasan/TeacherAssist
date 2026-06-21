@@ -5,7 +5,8 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import { rtlCache } from './theme/rtlCache';
 import { educationalTheme } from './theme/educationalTheme';
 import { ClassroomProvider } from './context/ClassroomContext';
-import Navbar from './components/layout/Navbar';
+import AppLayout from './components/layout/AppLayout';
+import RequireActiveClass from './components/layout/RequireActiveClass';
 import CatalogPage from './pages/CatalogPage';
 import GamePage from './pages/GamePage';
 import DashboardPage from './pages/DashboardPage';
@@ -21,13 +22,30 @@ export default function App() {
           <CssBaseline />
           <ClassroomProvider>
             <BrowserRouter>
-              <Navbar />
               <Routes>
-                <Route path="/" element={<CatalogPage />} />
-                <Route path="/game/:gameId" element={<GamePage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/whats-new" element={<WhatsNewPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route element={<AppLayout />}>
+                  {/* Roster-aware routes are gated behind active-class selection. */}
+                  <Route
+                    path="/"
+                    element={
+                      <RequireActiveClass>
+                        <CatalogPage />
+                      </RequireActiveClass>
+                    }
+                  />
+                  <Route
+                    path="/game/:gameId"
+                    element={
+                      <RequireActiveClass>
+                        <GamePage />
+                      </RequireActiveClass>
+                    }
+                  />
+                  {/* Ungated so a teacher with no classes can still reach the dashboard. */}
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/whats-new" element={<WhatsNewPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
               </Routes>
             </BrowserRouter>
           </ClassroomProvider>

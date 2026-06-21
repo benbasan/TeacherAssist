@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useMarkGamePlayed } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
 import {
   Box,
@@ -127,9 +128,10 @@ type Verdict = 'correct-stop' | 'wrong-stop' | 'correct-ok';
 // Root state machine: Topic → Board → Reveal → (loop) → Summary
 // ---------------------------------------------------------------------------
 
-export default function SpotTheGlitch() {
+export default function SpotTheGlitch({ gameId }: { gameId?: string }) {
   const [stage, setStage] = useState<Stage>('topic');
   const [topic, setTopic] = useState<GlitchTopic | null>(null);
+  useMarkGamePlayed(gameId, stage === 'summary');
   const [index, setIndex] = useState(0);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [correctCount, setCorrectCount] = useState(0);

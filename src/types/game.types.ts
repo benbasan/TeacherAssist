@@ -21,6 +21,22 @@ export interface EducationalGame {
   componentName: string;
 }
 
+/**
+ * A single saved class: a named roster of student names plus the games this
+ * class has already finished. Stored per-teacher in Clerk `unsafeMetadata`
+ * (see `ClassroomContext`).
+ */
+export interface Classroom {
+  /** Stable unique id (crypto.randomUUID). */
+  id: string;
+  /** Display name, e.g. "ג'1". */
+  name: string;
+  /** Roster of student names. */
+  students: string[];
+  /** Ids of games this class has already played (cloud-persisted history). */
+  playedGames: string[];
+}
+
 /** A single entry on the "What's New" timeline. */
 export interface WhatsNewEntry {
   /** Stable unique id. */

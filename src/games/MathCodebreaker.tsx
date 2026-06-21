@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useMarkGamePlayed } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
 import {
   Box,
@@ -163,10 +164,11 @@ type Stage = 'difficulty' | 'game' | 'unlocked';
 // Root state machine
 // ---------------------------------------------------------------------------
 
-export default function MathCodebreaker() {
+export default function MathCodebreaker({ gameId }: { gameId?: string }) {
   const [stage, setStage] = useState<Stage>('difficulty');
   const [riddles, setRiddles] = useState<Riddle[]>([]);
   const [revealed, setRevealed] = useState<number[]>([]);
+  useMarkGamePlayed(gameId, stage === 'unlocked');
   const [error, setError] = useState(false);
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

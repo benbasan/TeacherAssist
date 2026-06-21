@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useMarkGamePlayed } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
 import {
   Box,
@@ -463,9 +464,10 @@ type Stage = 'topic' | 'scenario' | 'consequence' | 'summary';
 // Root state machine: Topic → Scenario → Consequence → (loop) → Summary
 // ---------------------------------------------------------------------------
 
-export default function SocialDilemmas() {
+export default function SocialDilemmas({ gameId }: { gameId?: string }) {
   const [stage, setStage] = useState<Stage>('topic');
   const [topic, setTopic] = useState<Topic | null>(null);
+  useMarkGamePlayed(gameId, stage === 'summary');
   const [index, setIndex] = useState(0);
   const [empathy, setEmpathy] = useState(START_EMPATHY);
   const [choice, setChoice] = useState<Choice | null>(null);

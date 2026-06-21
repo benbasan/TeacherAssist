@@ -38,8 +38,12 @@ src/
 ├── App.tsx                     # Application shell: providers + router (route table)
 ├── main.tsx                    # React root render
 ├── components/layout/
-│   ├── Navbar.tsx              # Sticky AppBar; nav links + Clerk auth controls (SignIn/UserButton, "הכיתות שלי")
-│   └── GameWrapper.tsx         # Shared frame around every game (title, chips, back button)
+│   ├── AppLayout.tsx           # Shell: Navbar + AttendanceDrawer + <Outlet/>; owns drawer open state
+│   ├── Navbar.tsx              # Sticky AppBar; nav links + Clerk auth + active-class widget + attendance toggle
+│   ├── GameWrapper.tsx         # Shared frame around every game (title, chips, back button)
+│   ├── ClassSelectionGateway.tsx # Entry gatekeeper: "עם איזה כיתה משחקים היום?" class-picker grid
+│   ├── RequireActiveClass.tsx  # Gate: signed-in + no active class → render the gateway (wraps catalog/game)
+│   └── AttendanceDrawer.tsx    # Right-anchored collapsible Drawer; per-student present/absent switches
 ├── context/
 │   └── ClassroomContext.tsx    # Multi-classroom state/cloud layer (Clerk unsafeMetadata; see §8)
 ├── utils/
@@ -63,7 +67,7 @@ src/
 │   ├── educationalTheme.ts     # MUI theme (indigo/teal, Rubik, rtl, borderRadius 16)
 │   └── rtlCache.ts             # Emotion cache for RTL CSS (key "muirtl")
 └── types/
-    └── game.types.ts           # EducationalGame, WhatsNewEntry contracts
+    └── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom contracts
 ```
 
 ---
@@ -77,15 +81,16 @@ src/
   <CacheProvider value={rtlCache}>      // RTL-correct CSS emission
     <ThemeProvider theme={educationalTheme}>
       <CssBaseline />
-      <ClassroomProvider>               // classroom state, inside Clerk so it can read useUser() (§8)
+      <ClassroomProvider>               // classroom + session state, inside Clerk so it can read useUser() (§8)
         <BrowserRouter>
-          <Navbar />
           <Routes>
-            "/"              → <CatalogPage />
-            "/game/:gameId"  → <GamePage />
-            "/dashboard"     → <DashboardPage />   // teacher's saved classes (SignedIn-gated)
-            "/whats-new"     → <WhatsNewPage />
-            "*"              → <Navigate to="/" replace />   // unknown path → catalog
+            <Route element={<AppLayout />}>      // Navbar + AttendanceDrawer + <Outlet/>
+              "/"              → <RequireActiveClass><CatalogPage /></RequireActiveClass>
+              "/game/:gameId"  → <RequireActiveClass><GamePage /></RequireActiveClass>
+              "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
+              "/whats-new"     → <WhatsNewPage />
+              "*"              → <Navigate to="/" replace />   // unknown path → catalog
+            </Route>
           </Routes>
         </BrowserRouter>
       </ClassroomProvider>
@@ -103,6 +108,22 @@ src/
   never requires adding a route.
 - **Why the `*` fallback:** any unknown/stale URL redirects to the catalog instead of a
   blank screen.
+
+### Entry session flow (AppLayout + gateway + attendance)
+All routes now nest under a single **`AppLayout`** (`<Route element={<AppLayout/>}>`), which renders
+the `Navbar`, the right-anchored collapsible **`AttendanceDrawer`**, and the routed content via
+`<Outlet/>`. `AppLayout` owns the drawer's open/close state and hands a toggle to the `Navbar`.
+
+The catalog and game routes are wrapped in **`RequireActiveClass`**, the **entry gatekeeper**:
+- *Signed-in teacher, no active class selected* → render `ClassSelectionGateway` (a playful grid of
+  the teacher's classes; clicking one calls `setActiveClassroom(id)` and unlocks the catalog). A
+  teacher with **zero** classes sees a CTA into `/dashboard`.
+- *Signed out* → render the route as-is (the catalog stays open to anonymous visitors, unchanged).
+
+`/dashboard` and `/whats-new` are deliberately **left ungated** so a class-less teacher isn't
+trapped away from the place they create classes. The `Navbar` shows a `כיתה: … 🔄` chip (click to
+switch class → returns to the gateway) and an attendance toggle, both only when a class is active.
+Active-class selection and attendance are **session-only** (in-memory) — see §7.
 
 ### Deployment / Routing (SPA rewrites)
 Because routing is client-side (`BrowserRouter`), a hard refresh or direct visit to a deep URL
@@ -219,6 +240,8 @@ Type contracts in `src/types/game.types.ts`:
 - **`EducationalGame`** — `id`, `title`, `description`, `targetAge`, `subject`,
   `estimatedTimeMinutes`, `componentName`.
 - **`WhatsNewEntry`** — `id`, `date`, `title`, `shortDescription`, `gameId?`.
+- **`Classroom`** — `id`, `name`, `students: string[]`, `playedGames: string[]` (cloud-persisted
+  per-teacher via Clerk; see §7). Re-exported from `ClassroomContext` for back-compat.
 
 The registry stores compact keys for `subject` and `targetAge`. `src/data/taxonomy.ts` maps
 those to Hebrew labels and to the catalog's visual identity (`subjectMeta()` → `{ label, icon,
@@ -228,7 +251,8 @@ catalog/wrapper render a per-subject emoji icon and accent color.
 Consumers (all render purely from data — never hard-code a game list):
 - **`CatalogPage.tsx`** imports `games-registry.json` as `EducationalGame[]`, derives the
   subject + targetAge option lists, filters by them, and renders a card grid (icon/color from
-  `taxonomy`). Each card links to `/game/${game.id}`.
+  `taxonomy`). Each card links to `/game/${game.id}`. When an active class has a game in its
+  `playedGames`, the card shows a corner "שוחק כבר בכיתה זו 👍" `Chip` (emerald).
 - **`GamePage.tsx`** consumes the registry for lookup + the Registry Map for resolution (§4).
 - **`GameWrapper.tsx`** frames each game with the subject icon/label + estimated time.
 - **`WhatsNewPage.tsx`** imports `whats-new.json` as `WhatsNewEntry[]`, sorts by `date`
@@ -265,20 +289,35 @@ names) and reuse them across roster-based games — with **no backend**. Clerk p
 per-user cloud storage:
 
 - **Storage:** each teacher's classes live in `user.unsafeMetadata.classrooms` — an array of
-  `Classroom { id, name, students: string[] }`. `unsafeMetadata` is the **client-writable** Clerk
-  metadata bucket (writable straight from the browser via `user.update(...)`), which is exactly why
-  it fits a serverless model. It is "unsafe" only in that the client can write it; that is
-  acceptable here because class rosters are non-sensitive.
+  `Classroom { id, name, students: string[], playedGames: string[] }` (type in
+  `src/types/game.types.ts`, re-exported from `ClassroomContext`). `playedGames` holds the ids of
+  games this class has finished (catalog history badges, §5). `unsafeMetadata` is the
+  **client-writable** Clerk metadata bucket (writable straight from the browser via
+  `user.update(...)`), which is exactly why it fits a serverless model. It is "unsafe" only in that
+  the client can write it; that is acceptable here because class rosters are non-sensitive. Legacy
+  classrooms saved before `playedGames` existed are normalized to `[]` on read.
 - **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
   place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
   (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
-  stale) and exposes async `addClassroom` / `updateClassroom` / `removeClassroom`, each of which
-  rewrites the whole `classrooms` array via
+  stale) and exposes async `addClassroom` / `updateClassroom` / `removeClassroom` /
+  `markGameAsPlayedInClass`, each of which rewrites the whole `classrooms` array via
   `user.update({ unsafeMetadata: { ...user.unsafeMetadata, classrooms: next } })`.
-- **Consumers:** `DashboardPage` (full CRUD UI) and `ComplimentGamePack`'s `NamesInput` (a
-  "בחר כיתה" `Select` that hydrates the roster instantly). **Only `ComplimentGamePack` consumes a
-  roster** — `MathCodebreaker`, `SocialDilemmas`, and `SpotTheGlitch` have no student-name input, so
-  they are intentionally left without a class selector (no dead UI).
+  `markGameAsPlayedInClass(classId, gameId)` appends `gameId` (deduped) to that class's `playedGames`.
+- **Session state (NOT persisted):** the same context also holds in-memory `activeClassroomId` and
+  `absentStudents`, with `setActiveClassroom(id)` (clearing also resets attendance) and
+  `toggleStudentAttendance(name)`. These are deliberately **not** written to Clerk, so every app
+  entry re-prompts for the class (the gateway, §3) and starts attendance fresh. A `useMarkGamePlayed`
+  hook (in the same module) lets a game record itself as played on victory: it fires
+  `markGameAsPlayedInClass(activeClassroomId, gameId)` once, and is a no-op when signed out / no
+  active class.
+- **Consumers:** `DashboardPage` (full CRUD UI); `ClassSelectionGateway` + `AttendanceDrawer` +
+  `Navbar` (session state); `CatalogPage` (history badges); and the games (`useMarkGamePlayed` in all
+  five — `gameId` is threaded from `GamePage` via the Registry Map). **Only `ComplimentGamePack`
+  consumes a roster**: it auto-loads the active class's students minus absentees (manual edit
+  retained); `MathCodebreaker`, `SocialDilemmas`, `SpotTheGlitch`, and `FocusDetectivesGame` have no
+  student-name input, so roster filtering is a no-op there. The former in-game "בחר כיתה" selector was
+  removed — the active class is now chosen globally at the gateway, so an in-game picker would be
+  redundant.
 - **Auth UI:** the Navbar uses Clerk's `<SignedIn>/<SignedOut>`, `<SignInButton>`, and
   `<UserButton>`. `UserButton` is Clerk's own widget — the single deliberate exception to the
   "MUI for all UI" guideline (everything else stays MUI).
@@ -355,3 +394,18 @@ Append a dated entry here for every significant technical decision.
   three games have no roster concept, so a selector there would be dead UI. `UserButton` is the one
   accepted non-MUI widget. `parseNames` was extracted to `src/utils/parseNames.ts` so the dashboard
   and the game share one parser.
+- **2026-06-21 — Classroom-first session flow (gateway + attendance sidebar + game history).**
+  *Why:* the app should open around a **teaching session**, not a generic catalog — the teacher
+  picks which class they're teaching first, manages live attendance, and sees which games a class
+  already played. *How:* all routes nest under `AppLayout` (Navbar + right-anchored collapsible
+  `AttendanceDrawer` + `<Outlet/>`); `RequireActiveClass` gates the catalog/game routes so a
+  signed-in teacher without an active class sees `ClassSelectionGateway` first (dashboard/whats-new
+  stay ungated to avoid trapping a class-less teacher). `ClassroomContext` gained **session-only**
+  (un-persisted) `activeClassroomId` + `absentStudents` with `setActiveClassroom` /
+  `toggleStudentAttendance`, plus a cloud-persisted `markGameAsPlayedInClass` and a `useMarkGamePlayed`
+  hook. *Scope choices:* selection/attendance are session-only (re-prompt each entry); only
+  `playedGames` persists. The `Classroom` type moved to `game.types.ts` (re-exported for back-compat)
+  and gained `playedGames: string[]` (legacy rows normalized to `[]`). `gameId` is threaded to each
+  game through the Registry Map (`GamePage`) so all **five** games self-record on victory. The
+  redundant in-game class picker was removed; `ComplimentGamePack` now auto-loads the active roster
+  minus absentees.

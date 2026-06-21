@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useMarkGamePlayed } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
 import {
   Box,
@@ -116,9 +117,10 @@ type Phase = 'INTRO' | 'PLAYING' | 'SUMMARY';
 // Root phase machine
 // ---------------------------------------------------------------------------
 
-export default function FocusDetectivesGame() {
+export default function FocusDetectivesGame({ gameId }: { gameId?: string }) {
   const [phase, setPhase] = useState<Phase>('INTRO');
   const [score, setScore] = useState(0);
+  useMarkGamePlayed(gameId, phase === 'SUMMARY');
 
   const finishGame = (finalScore: number) => {
     setScore(finalScore);

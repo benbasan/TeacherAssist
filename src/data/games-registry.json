@@ -52,5 +52,122 @@
     "subject": "english",
     "estimatedTimeMinutes": 7,
     "componentName": "WordPop"
+  },
+  {
+    "id": "compliment-time-bomb",
+    "title": "הפצצה המתקתקת של הפרגונים",
+    "description": "הפצצה מתקתקת! העבירו חפץ רך בכיתה, כל תלמיד זורק מילה טובה על חבר/ה, והמורה לוחץ '+1 פרגון!'. הגיעו ליעד לפני שהזמן אוזל והצילו את הכיתה באהבה — משחק פתיחה חברתי מלא אנרגיה חיובית.",
+    "targetAge": "elementary_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 10,
+    "componentName": "ComplimentTimeBomb"
+  },
+  {
+    "id": "silent-ninja",
+    "title": "הנינג'ה השקט",
+    "description": "Brain Break אקטיבי לכיתה: פקודות תנועה משחררות אנרגיה, וברגע שמופיע הנינג'ה כולם קופאים בדממה מוחלטת. מי שזז מתיישב — נמשיך עד שיוכתרו אלופי הנינג'ה של הכיתה, ומסיימים רגועים ומוכנים ללמידה.",
+    "targetAge": "elementary_low",
+    "subject": "social",
+    "estimatedTimeMinutes": 5,
+    "componentName": "SilentNinja"
+  },
+  {
+    "id": "would-you-rather",
+    "title": "זה או זה? — משפט הכיתה",
+    "description": "המסך מציג דילמה מצחיקה או פילוסופית קלה — התלמידים עוברים לצד שבחרו, המורה מזין את הספירה ורואה גרף חי. בסוף מתגבש 'פרופיל הכיתה' הייחודי! מתאים לשעת מחנך, ספיישל ואירועי היכרות.",
+    "targetAge": "middle",
+    "subject": "social",
+    "estimatedTimeMinutes": 15,
+    "componentName": "WouldYouRather"
+  },
+  {
+    "id": "two-truths-lie",
+    "title": "בלש השקרים של המורה",
+    "description": "המורה מזין שתי עובדות אמיתיות על עצמו ושקר אחד. הקבוצות מתייעצות 60 שניות ומצביעות — מי יצליח לתפוס את המורה? חשיפה דרמטית עם חותמת 'שקר!' מונפשת. מעולה לחיזוק קשר מורה-תלמיד.",
+    "targetAge": "elementary_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 10,
+    "componentName": "TwoTruthsLie"
+  },
+  {
+    "id": "mind-readers",
+    "title": "קריאת מחשבות כיתתית",
+    "description": "תלמיד אחד בוחר תשובה לשאלה אישית בחשאי — והכיתה מנסה לקרוא את מחשבותיו! כל התאמה מעלה את מד הטלפתיה הכיתתי. משחק היכרות מרתק שמפתח אמפתיה ומגלה נקודות מבט ייחודיות.",
+    "targetAge": "elementary_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 12,
+    "componentName": "MindReaders"
+  },
+  {
+    "id": "emotion-generator",
+    "title": "מכונת הרגשות המשוגעת",
+    "description": "גלגל הגורל שולף שילוב מטורף של רגש ופעולה — והשחקן מציג בפנטומימה בפני הכיתה! מוביל לצחוק, לזיהוי רגשות ולהבנת שפת הגוף. מושלם לאנרגיה חיובית ולהשקעה חברתית-רגשית.",
+    "targetAge": "elementary_low",
+    "subject": "social",
+    "estimatedTimeMinutes": 10,
+    "componentName": "EmotionGenerator"
+  },
+  {
+    "id": "silent-sync-tower",
+    "title": "מגדל הסינכרון השקט",
+    "description": "חוק פשוט, אתגר מטורף: המספר על המסך מציין כמה תלמידים צריכים לקום בו-זמנית — ללא דיבור, ללא תיאום! אם קמו יותר או פחות, המגדל קורס ומתחילים מחדש. משחק מושלם לסינכרון כיתתי ולהוריד רמת האדרנלין לריכוז מקסימלי.",
+    "targetAge": "middle",
+    "subject": "social",
+    "estimatedTimeMinutes": 8,
+    "componentName": "SilentSyncTower"
+  },
+  {
+    "id": "rhyme-express",
+    "title": "רכבת החרוזים המהירה",
+    "description": "הרכבת נכנסת לתחנה עם מילה על הקטר — הכיתה מסרקת 6 קוביות מילים ברציף ומזהה את 3 החרוזות! כל מילה נכונה נטענת לקרון, מילה שגויה נופלת עם ענן אבק. כשכל הקרונות מלאים, הרכבת מצפצפת ויוצאת לדרך. מושלם לתרגול מודעות פונולוגית וחרוזים לכיתות א-ב.",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 7,
+    "componentName": "RhymeExpress"
+  },
+  {
+    "id": "punctuation-orchestra",
+    "title": "תזמורת סימני הפיסוק",
+    "description": "המורה מניף את הפיסוק — הכיתה מגיבה! סימן הפיסוק על המסך מתחלף בכל לחיצה: נקודה = קריאה רגועה, שאלה = תמיהה משעשעת, קריאה = צעקה שמחה עם ידיים מורמות. מד הדרמה הכיתתי עולה עם כל סיבוב ומוביל לכתרת 'התזמורת המנצחת'. מושלם לתרגול טונציה וקריאה קולית.",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 10,
+    "componentName": "PunctuationOrchestra"
+  },
+  {
+    "id": "letter-bridge",
+    "title": "גשר האותיות הסודיות",
+    "description": "קואלה חמוד רוצה לחצות נהר, אבל כל קרש בגשר חסר אות אחת מבלבלת (א'/ע', ח'/כ', ט'/ת', ס'/ש'). הכיתה מחליטה יחד, המורה לוחץ — קרש נכון ננעל והקואלה צועד קדימה. מושלם לתרגול שגיאות כתיב נפוצות בכיתות א-ב.",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 8,
+    "componentName": "LetterBridge"
+  },
+  {
+    "id": "sentence-detectives",
+    "title": "בלשי המשפטים המבולבלים",
+    "description": "סערה דיגיטלית בילגנה את המשפטים! מילות המגנט פוזרות על הלוח — הכיתה מכתיבה למורה את הסדר הנכון, הוא לוחץ על המילים ובונה את המשפט בזמן אמת. משפט נכון — צוהל! משפט שגוי — המילים עפות חזרה. מושלם לתרגול מבנה משפט בעברית.",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 10,
+    "componentName": "SentenceDetectives"
+  },
+  {
+    "id": "hungry-word-monster",
+    "title": "מפלצת המילים הרעבה",
+    "description": "מפלצת חמודה ורעבה רק לסוג מסוים של מילים! הכיתה עוזרת למורה להאכיל אותה — לוחצים על כרטיסיות המילים הנכונות לפני שהיא מאבדת סבלנות. מושלם לתרגול אותיות פותחות ומסיימות בכיף ובהמולה!",
+    "targetAge": "elementary_low",
+    "subject": "hebrew",
+    "estimatedTimeMinutes": 8,
+    "componentName": "HungryWordMonster"
+  },
+  {
+    "id": "digital-pass-parcel",
+    "title": "החבילה העוברת הדיגיטלית",
+    "description": "גרסה מודרנית וכיתתית למשחק הקלאסי! המורה מנגן מוזיקה מתוך האתר, הילדים מעבירים כדור, והאתר עוצר אוטומטית בזמן אקראי — מי שיש לו את הכדור מקבל משימה חברתית מצחיקה. 5 סיבובים של קידוד, הצחקה ועידוד הדדי.",
+    "targetAge": "elementary_low",
+    "subject": "social",
+    "estimatedTimeMinutes": 15,
+    "componentName": "DigitalPassParcel"
   }
 ]

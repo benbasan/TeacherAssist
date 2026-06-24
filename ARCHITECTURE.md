@@ -58,7 +58,20 @@ src/
 │   ├── SocialDilemmas.tsx      # SEL dilemmas (topic→scenario→consequence→summary; §4a)
 │   ├── FocusDetectivesGame.tsx # Focus capsule (intro→playing[memorize/blink/recall/feedback]→summary; §4a)
 │   ├── SpotTheGlitch.tsx       # Hebrew "spot the error" game (topic→board→reveal→summary; §4a)
-│   └── WordPop.tsx             # English vocab arcade: float-up bubbles, pop the category (setup→playing→over; §4a)
+│   ├── WordPop.tsx             # English vocab arcade: float-up bubbles, pop the category (setup→playing→over; §4a)
+│   ├── ComplimentTimeBomb.tsx  # Social bomb-countdown: tap "+1 פרגון!" to reach goal before time runs out (setup→playing→win/lose; §4a)
+│   ├── SilentNinja.tsx         # Brain-break: movement command → random freeze → eliminate movers (setup→action→freeze→victory; §4a)
+│   ├── WouldYouRather.tsx      # Split-screen vote dilemmas, teacher enters counts, animated result bars + class profile (setup→question→reveal→summary; §4a)
+│   ├── TwoTruthsLie.tsx        # Teacher enters 2 truths + 1 lie; 60s consultation timer; reveal with stamp animation (setup→timer→reveal→victory; §4a)
+│   ├── MindReaders.tsx         # Student picks secret answer; class votes; telepathy-meter summary (names→pick→transmit→class_vote→reveal→summary; §4a)
+│   ├── EmotionGenerator.tsx    # Slot-machine spins emotion+action combo; student acts in pantomime; class guesses (names→pick_actor→spin→peek→acting→reveal→summary; §4a)
+│   ├── SilentSyncTower.tsx     # Teacher-judged whole-class sync: N students must stand simultaneously; tower grows floor-by-floor, collapses on wrong count (setup→playing→victory; §4a)
+│   ├── DigitalPassParcel.tsx   # Digital pass-the-parcel: built-in music plays then auto-stops randomly; holder gets a social task card (setup→playing→revealed→victory; §4a)
+│   ├── HungryWordMonster.tsx   # Hebrew phonology: monster eats words matching the chosen letter focus; hunger meter fills per correct feed; 4 focuses × 3 rounds (setup→playing→victory; §4a)
+│   ├── SentenceDetectives.tsx  # Hebrew sentence structure: scrambled word magnets clicked into order by teacher; green glow on correct, shake+reset on wrong; 2 difficulties × 3 sentences (setup→playing→victory; §4a)
+│   ├── LetterBridge.tsx        # Hebrew spelling: koala crosses 5-plank bridge; each plank is a word with a missing homophonic letter (א/ע, ח/כ, ט/ת, ס/ש); two big letter buttons; wrong = plank shake (setup→playing→victory; §4a)
+│   ├── PunctuationOrchestra.tsx # Hebrew reading expression: giant sign cycles . ? ! on teacher click; class reads sentence with matching tone; drama-meter LinearProgress fills to victory (setup→playing→victory; §4a)
+│   └── RhymeExpress.tsx        # Hebrew phonology: locomotive shows target word; 6 shuffled platform tiles (3 rhymes + 3 distractors); click correct → loads into wagon with spring animation; wrong → fall animation; train departs on full load (setup→playing→victory; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
@@ -438,3 +451,189 @@ Append a dated entry here for every significant technical decision.
   game through the Registry Map (`GamePage`) so all **five** games self-record on victory. The
   redundant in-game class picker was removed; `ComplimentGamePack` now auto-loads the active roster
   minus absentees.
+- **2026-06-24 — Added `ComplimentTimeBomb` (7th game, "הפצצה המתקתקת של הפרגונים") from idea-pool
+  `social-001`.** *Why:* the catalog lacked a high-energy, whole-class cooperative "beat the clock"
+  social opener; a ticking-bomb compliment race fits the smartboard and warms up the room. *How:* §4a
+  state machine (`setup→playing→win/lose`), timer-driven via a single 1s countdown `useEffect`
+  (cleaned up on stage change). Implements the **hybrid names** flow on the setup screen — Scenario A
+  auto-loads the active roster (minus absentees) behind an emerald "כיתה {name}" badge with an inline
+  "הוסף תלמיד אורח" field; Scenario B falls back to a paste-in `TextField` (`parseNames`) so the game
+  stays 100% playable without a class. Records via `useMarkGamePlayed` on `win` and fires `confetti`.
+  Juice is asset-free: bouncy counter + screen-shake/red-pulse under 10s + a tiny Web-Audio `Sfx`
+  helper (ding/tick) lazily started on the first user gesture, all wrapped in try/catch. First idea-pool
+  → game conversion (Game-Factory loop over `src/data/ideas-pool/`).
+- **2026-06-24 — Added `SilentNinja` (8th game, "הנינג'ה השקט") from idea-pool `social-002`.**
+  *Why:* the catalog needed a short, active "brain break" that releases energy and then snaps the
+  class back to focus — ideal after recess or before a test. *How:* §4a state machine
+  (`setup→action→freeze→victory`); the `action` stage arms a single random 3–7s `setTimeout` (cleaned
+  up on stage change) that "snaps" to a flashing red `freeze` with a Web-Audio gong. Same **hybrid
+  names** contract as `ComplimentTimeBomb` (Scenario A auto-roster + guest field; Scenario B paste-in
+  `TextField`). Names drive an optional elimination variant — in `freeze` the teacher taps movers out
+  via chips, ending when ≤3 ninjas remain or after `MAX_ROUNDS`; with no names it falls back to a fixed
+  5-round counter. Records via `useMarkGamePlayed` on `victory`, fires `confetti`, and crowns the
+  surviving champions. Reuses the asset-free try/catch `Sfx` helper pattern (gong/snap).
+- **2026-06-24 — Added `WouldYouRather` (9th game, "זה או זה? — משפט הכיתה") from idea-pool
+  `social-003`.** *Why:* the catalog needed a low-prep physical-movement activity that surfaces
+  classroom diversity and sparks discussion — "Would You Rather" is a classroom classic. *How:* §4a
+  state machine (`setup→question→reveal→summary`). Split-screen `question` stage shows orange (A)
+  and purple (B) panels; teacher uses ± steppers to enter vote counts. `reveal` shows animated
+  `LinearProgress` bars (no chart library). After all dilemmas, `summary` builds a "class profile"
+  label from the A-vs-B ratio across all rounds. Four content packs (humor / food / super-power /
+  life dilemmas), each 5 dilemmas, shuffled per session. Same hybrid names contract (names serve as
+  "total present" reference for percentage accuracy — physical-movement game so individual names don't
+  drive mechanics). Pool's `targetAge: "junior_high"` mapped to taxonomy key `middle` (חטיבת ביניים).
+  Records via `useMarkGamePlayed` on `summary` and fires `confetti` on summary transition.
+- **2026-06-24 — Added `TwoTruthsLie` (10th game, "בלש השקרים של המורה") from idea-pool
+  `social-004`.** *Why:* strengthens teacher-student bonds by making the teacher the "subject" —
+  students feel they know an adult as a person. *How:* §4a state machine (`setup→timer→reveal→victory`).
+  Setup screen has a teacher fact-entry form (3 TextFields) with a RadioGroup to secretly mark which
+  is the lie. `timer` stage shows all 3 cards plus a `LinearProgress` countdown (60s, turns red under
+  10s). `reveal` stage animates: truth cards flip to green, the lie card gets a CSS `@keyframes
+  stampDrop` overlay (rotated red "שקר!" border box, scale bounce). Multi-round: after each reveal
+  the teacher can enter a new set or go to victory. Records via `useMarkGamePlayed` on `victory`.
+  Hybrid names present for class-badge context and guest additions but don't drive game mechanics.
+- **2026-06-24 — Added `MindReaders` (11th game, "קריאת מחשבות כיתתית") from idea-pool
+  `social-006` (batch-2).** *Why:* needed a "getting-to-know-you" game where student perspectives
+  are genuinely surfaced — secrets create suspense; guessing builds empathy. *How:* §4a state machine
+  with 6 stages (`names→pick_transmitter→transmit→class_vote→reveal→summary`). The "transmit" stage
+  shows the question + 3 options; the transmitter secretly taps one — a 900ms `secretPulse` animation
+  fires, then a `Fade` out hides their choice before the class sees. "Class vote" renders the same 3
+  options for the class majority pick. Reveal stacks both labels (transmitter + class) on the same
+  option chip when they match. Summary shows an animated `LinearProgress` telepathy meter + per-round
+  breakdown. 8 shuffled questions, 3 per session. Hybrid names flow is load-bearing here (transmitter
+  is always picked from the player list via name chips in `pick_transmitter`). Fires `confetti` on
+  match reveals and celebrate() on summary if ≥66%.
+
+- **2026-06-24 — Added `EmotionGenerator` (12th game, "מכונת הרגשות המשוגעת") from idea-pool
+  `social-008` (batch-2). Skipped `social-007` (ConflictTimeMachine).** *Why:* needed a
+  short, high-energy expressive game for emotional-regulation in a safe, humorous format. *How:*
+  §4a state machine with 7 stages (`names→pick_actor→spin→peek→acting→reveal→summary`). The `spin`
+  stage runs two independent slot-machine reels (`SlotReel`) via `setInterval` at 90ms cycling
+  through their lists; after 2.2s they land on the pre-determined combo. The `peek` stage is
+  actor-only: reveals the large emoji+label combo, then transitions to `acting`. Teacher triggers
+  the reveal after watching the pantomime. 8 emotions × 10 actions (80 possible combos); combo
+  picked at `pick_actor` time. Hybrid names drive the actor-selection chip grid; manual TextField
+  fallback when no players listed.
+
+- **2026-06-24 — Added `DigitalPassParcel` (14th game, "החבילה העוברת הדיגיטלית") from idea-pool
+  `social-010` (batch-2).** *Why:* the catalog needed a physical/active icebreaker that also
+  brings levity and peer encouragement — the classic pass-the-parcel mechanic is universally
+  known and requires zero setup beyond a soft object. *How:* §4a state machine with 4 stages
+  (`setup→playing→revealed→victory`). Three music styles (pop/circus/hip-hop) synthesized
+  entirely via Web Audio `setInterval` note schedulers (no asset files) — each style has a
+  distinct note pattern, tempo, and oscillator type (sine for pop/circus, square for hip-hop).
+  A `MusicPlayer` singleton class handles `start(style)`, `stop()`, and a `rip()` method
+  (white-noise burst via `createBuffer`) for the paper-rip SFX on task reveal. Auto-stop fires
+  after a random 10–25s `setTimeout` stored in `autoStopRef`; the teacher can also manually
+  press Stop at any time. `usedIndicesRef` (a ref, not state) tracks used tasks to avoid
+  repeats without stale-closure issues in the timer callback. 5 rounds × 10 task cards
+  (social/fun missions like making the teacher laugh, giving compliments, group movement).
+  Gift box visual: colored `Box` with ribbon strips + 🎀 bow, pulsing `dppBounce` animation
+  while music plays; wrap color cycles through 5 WRAP_COLORS per round. `Zoom` transition
+  on task card reveal. Hybrid names: class badge + present-count (Scenario A) / paste-in
+  TextField (Scenario B) — names are contextual, not mechanics-driving. Records via
+  `useMarkGamePlayed` on `victory` + `celebrate()` confetti. Cleanup `useEffect` stops
+  music and clears timer on unmount.
+
+- **2026-06-24 — Added `RhymeExpress` (19th game, "רכבת החרוזים המהירה") from idea-pool
+  `hebrew-015` (batch-3) — final game of batch-3.** *Why:* phonological awareness (the ability to
+  hear and manipulate sound units in words) is foundational for reading; rhyme identification is a
+  key early-literacy benchmark, and the train metaphor ("load the wagons with rhyming words")
+  is concretely spatial and motivating for young children. *How:* §4a state machine
+  (`setup→playing→victory`). Two difficulty presets — easy (simple ון/ה/ים rhyme families) and
+  hard (ר/ור/ון) — each with 3 rounds. Each round has 1 target word displayed on the locomotive
+  and 6 shuffled platform tiles (3 correct rhymes + 3 distractors). Teacher clicks platform tiles
+  as students identify them: correct → tile greyed out + word appears in the next empty wagon
+  with `@keyframes rrLoad` (spring scale-in); wrong → `@keyframes rrFall` (tumble-and-fade, 750ms
+  timeout sets `failed: true`). When all 3 wagons fill (`loadedWords.every(w => w !== null)`), a
+  train-whistle SFX fires + `@keyframes rrDepart` slides the whole train off-screen left (on the
+  `dir="ltr"` train container), then after 1.4s advances to the next round or victory. Platform
+  tiles are shuffled via Fisher-Yates in `initRound()` (called on round start). Victory screen:
+  blue locomotive + 3 wagons emoji row + confetti. Hybrid names: class badge + present count
+  (Scenario A) / paste-in TextField (Scenario B). Records via `useMarkGamePlayed` on `victory`.
+
+- **2026-06-24 — Added `PunctuationOrchestra` (18th game, "תזמורת סימני הפיסוק") from idea-pool
+  `hebrew-014` (batch-3).** *Why:* expressive oral reading is a core literacy skill; making it a
+  whole-class "orchestra" with a conductor (the teacher) removes individual performance anxiety
+  and makes vocal intonation practice fun and high-energy. *How:* §4a state machine
+  (`setup→playing→victory`). The game has one piece of state that matters: `signIndex` — which
+  of the 3 signs (`.` / `?` / `!`) is currently active. Each sign carries a `color`, `emoji`,
+  and `instruction`. Teacher presses "החלף סימן" → `pickNextSign()` selects a different sign
+  randomly, `TOTAL_ROUNDS (9)` counter increments, drama-meter `LinearProgress` fills. The
+  `transitioning` flag (cleared after 450ms) drives `@keyframes poSwish` — a cubic-bezier
+  spring bounce on the sign circle — and `@keyframes poPulse` (idle glow) when at rest. The
+  sentence text is shown with the active sign appended in the matching color, giving the class
+  a complete visual cue for how to read it. On the 9th change, a 700ms delay precedes confetti
+  + victory transition. Setup offers 5 preset sentences and a custom-text TextField; the teacher
+  can type any sentence in one second. No auto-timer — manual control lets the teacher pace
+  according to class response. Hybrid names: class badge + present count (Scenario A) / paste-in
+  TextField (Scenario B). Records via `useMarkGamePlayed` on `victory`.
+
+- **2026-06-24 — Added `LetterBridge` (17th game, "גשר האותיות הסודיות") from idea-pool
+  `hebrew-013` (batch-3).** *Why:* needed a concrete, visual mechanic for the most common
+  elementary spelling confusions in Hebrew — homophonic letter pairs (א/ע, ח/כ, ט/ת, ס/ש)
+  that sound identical and are frequently confused in writing. *How:* §4a state machine
+  (`setup→playing→victory`). A bridge-crossing narrative: a cute koala 🐨 advances one plank
+  per correct answer across 5 planks. Setup offers 4 letter-pair presets, each with 5 word
+  puzzles. Each puzzle shows the word template with `?` at the ambiguous position (e.g. `?רנב`)
+  and two large colored letter buttons (amber for first option, violet for second). Correct →
+  ascending two-note chord, plank turns green, koala advances after 900ms. Wrong → descending
+  "splash" SFX, CSS `@keyframes lbShake` (bounce-rotate) on the current plank, re-ask same
+  word. Word templates are rendered by a helper `WordDisplay` sub-component that splits on
+  `?` and injects an inline colored chip showing both letter options side-by-side. On wrong,
+  the full correct word is also briefly revealed in red to reinforce learning. Victory triggers
+  confetti + a green certificate Paper. `dir="ltr"` is set on the bridge container so the
+  koala always travels visually left-to-right regardless of the app's RTL direction. Hybrid
+  names: class badge + present count (Scenario A) / paste-in TextField (Scenario B). Records
+  via `useMarkGamePlayed` on `victory`.
+
+- **2026-06-24 — Added `SentenceDetectives` (16th game, "בלשי המשפטים המבולבלים") from idea-pool
+  `hebrew-012` (batch-3).** *Why:* the catalog needed a sentence-structure game where children
+  actively reconstruct a scrambled sentence — reinforcing Hebrew word order (subject-verb-object),
+  the role of the period-bearing last word, and logical sentence meaning. *How:* §4a state machine
+  (`setup→playing→victory`). Two difficulty presets — easy (3-word sentences) and hard (5-word
+  sentences) — each with 3 pre-defined sentences. The last word of each sentence carries a "." so
+  students can visually identify it as the sentence-ending word. Words are presented as colorful
+  magnet-style `Paper` chips in a scrambled pool area (re-scrambled on each round using a
+  Fisher-Yates shuffle, with retry until order differs from the correct answer). Teacher clicks
+  chips from the pool → they move to the build zone below. Clicking a built word removes it back
+  to the pool. Submit compares `builtWords.join(' ')` to `sentence.words.join(' ')`: correct →
+  green glow + 3-note SFX + 1.5s delay before advancing; wrong → CSS `@keyframes sdShake` on the
+  built zone + red background + 1.3s delay before re-scrambling. An undo button (removes the last
+  built word) aids teacher UX. Victory screen renders a gold-bordered "detective certificate" Paper.
+  Hybrid names: class badge + present count (Scenario A) / paste-in TextField (Scenario B) — names
+  are contextual only, not mechanics-driving. Records via `useMarkGamePlayed` on `victory` +
+  `celebrate()` confetti. Uses existing `hebrew` subject and `elementary_low` targetAge.
+
+- **2026-06-24 — Added `HungryWordMonster` (15th game, "מפלצת המילים הרעבה") from idea-pool
+  `hebrew-011` (batch-3).** *Why:* the catalog needed a Hebrew phonological-awareness game for
+  early elementary (כיתות א-ב) that targets starting/ending letters in a high-energy, whole-class
+  format. *How:* §4a state machine (`setup→playing→victory`). Four letter-focus presets — ב (start),
+  מ (start), ש (start), ה (end) — each with 3 rounds of 5 word cards (3 correct + 2 distractors
+  per round). Teacher taps cards to "feed" the monster; correct cards disappear (eaten) and fill
+  the hunger meter (3 🍖 slots); incorrect cards shake and gray out (spat back). Monster face
+  cycles through emoji states: 🤤 idle, 😋 eating, 🤢 rejecting, 🥳 round-complete. Round
+  advancement is handled by a `useEffect` keyed on `fedCorrect.size` — when it reaches
+  `CORRECT_PER_ROUND (3)`, it sets the `complete` monster state, plays a 3-note chime, and fires
+  a 1.6s timeout to advance the round index (or transition to `victory` on the last round). A ref
+  flag pattern (`shakingCard` state + 650ms timeout) drives the CSS `@keyframes mwmShake` on
+  rejected cards without stale-closure issues. Hybrid names: Scenario A auto-loads active roster
+  + guest-add field; Scenario B paste-in TextField — names serve as class-badge context only and
+  do not drive mechanics. Records via `useMarkGamePlayed` on `victory` + `celebrate()` confetti.
+  Uses the existing `hebrew` subject and `elementary_low` targetAge (no taxonomy changes needed).
+
+- **2026-06-24 — Added `SilentSyncTower` (13th game, "מגדל הסינכרון השקט") from idea-pool
+  `social-009` (batch-2).** *Why:* needed a non-verbal whole-class coordination challenge that
+  builds synchrony and group awareness — the "stand up exactly N students simultaneously" mechanic
+  forces students to read each other's body language without any communication. Perfect for training
+  classroom focus and calm, deliberate energy. *How:* §4a state machine (`setup→playing→victory`).
+  Three floor-count modes (3/5/7 floors with fixed target sequences). Visual tower: floors rendered
+  top-to-bottom, tapering narrower for future floors, gold+checkmark for completed floors, indigo
+  with a pulsing number for the current floor. Collapse triggers a CSS `sstShake @keyframes` on the
+  entire tower container + descending-sawtooth SFX; success plays an ascending-triad chord; victory
+  plays a 4-note arpeggio + confetti. `collapses` counter displayed as an error `Chip`. Teacher is
+  the sole judge: two large buttons "הצלחנו! 🎉" / "נפסלנו 💥" — both disabled during the 1s
+  post-collapse animation. Pool's `targetAge: "junior_high"` mapped to taxonomy key `middle`
+  (same convention as social-003/WouldYouRather). Hybrid names: Scenario A auto-loads active roster
+  + guest-add field; Scenario B paste-in TextField — names are for class-badge context only and do
+  not drive mechanics. Records via `useMarkGamePlayed` on `victory`.

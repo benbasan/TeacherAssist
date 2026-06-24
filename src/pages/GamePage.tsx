@@ -11,6 +11,19 @@ import SocialDilemmas from '../games/SocialDilemmas';
 import FocusDetectivesGame from '../games/FocusDetectivesGame';
 import SpotTheGlitch from '../games/SpotTheGlitch';
 import WordPop from '../games/WordPop';
+import ComplimentTimeBomb from '../games/ComplimentTimeBomb';
+import SilentNinja from '../games/SilentNinja';
+import WouldYouRather from '../games/WouldYouRather';
+import TwoTruthsLie from '../games/TwoTruthsLie';
+import MindReaders from '../games/MindReaders';
+import EmotionGenerator from '../games/EmotionGenerator';
+import SilentSyncTower from '../games/SilentSyncTower';
+import DigitalPassParcel from '../games/DigitalPassParcel';
+import HungryWordMonster from '../games/HungryWordMonster';
+import SentenceDetectives from '../games/SentenceDetectives';
+import LetterBridge from '../games/LetterBridge';
+import PunctuationOrchestra from '../games/PunctuationOrchestra';
+import RhymeExpress from '../games/RhymeExpress';
 
 const games = registry as EducationalGame[];
 
@@ -25,6 +38,19 @@ const REGISTRY_MAP: Record<string, ComponentType<{ gameId?: string }>> = {
   FocusDetectivesGame: FocusDetectivesGame,
   SpotTheGlitch: SpotTheGlitch,
   WordPop: WordPop,
+  ComplimentTimeBomb: ComplimentTimeBomb,
+  SilentNinja: SilentNinja,
+  WouldYouRather: WouldYouRather,
+  TwoTruthsLie: TwoTruthsLie,
+  MindReaders: MindReaders,
+  EmotionGenerator: EmotionGenerator,
+  SilentSyncTower: SilentSyncTower,
+  DigitalPassParcel: DigitalPassParcel,
+  HungryWordMonster: HungryWordMonster,
+  SentenceDetectives: SentenceDetectives,
+  LetterBridge: LetterBridge,
+  PunctuationOrchestra: PunctuationOrchestra,
+  RhymeExpress: RhymeExpress,
 };
 
 function NotFound({ message }: { message: string }) {

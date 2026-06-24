@@ -71,7 +71,8 @@ src/
 │   ├── SentenceDetectives.tsx  # Hebrew sentence structure: scrambled word magnets clicked into order by teacher; green glow on correct, shake+reset on wrong; 2 difficulties × 3 sentences (setup→playing→victory; §4a)
 │   ├── LetterBridge.tsx        # Hebrew spelling: koala crosses 5-plank bridge; each plank is a word with a missing homophonic letter (א/ע, ח/כ, ט/ת, ס/ש); two big letter buttons; wrong = plank shake (setup→playing→victory; §4a)
 │   ├── PunctuationOrchestra.tsx # Hebrew reading expression: giant sign cycles . ? ! on teacher click; class reads sentence with matching tone; drama-meter LinearProgress fills to victory (setup→playing→victory; §4a)
-│   └── RhymeExpress.tsx        # Hebrew phonology: locomotive shows target word; 6 shuffled platform tiles (3 rhymes + 3 distractors); click correct → loads into wagon with spring animation; wrong → fall animation; train departs on full load (setup→playing→victory; §4a)
+│   ├── RhymeExpress.tsx        # Hebrew phonology: locomotive shows target word; 6 shuffled platform tiles (3 rhymes + 3 distractors); click correct → loads into wagon with spring animation; wrong → fall animation; train departs on full load (setup→playing→victory; §4a)
+│   └── StepByStepReflection.tsx # SEL movement+reflection (Privilege-Walk adaptation): pick topic → forward "strengths" statements (emerald, ↑) → backward "challenges" statements (amber, ↓) → respectful debrief cards, NO confetti (setup→forward→backward→debrief; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
@@ -622,6 +623,27 @@ Append a dated entry here for every significant technical decision.
   do not drive mechanics. Records via `useMarkGamePlayed` on `victory` + `celebrate()` confetti.
   Uses the existing `hebrew` subject and `elementary_low` targetAge (no taxonomy changes needed).
 
+- **2026-06-24 — Added `StepByStepReflection` (20th game, "צעד צעד: מרוץ המודעות").**
+  *Why:* the catalog lacked a whole-class movement-and-reflection activity for homeroom/SEL time; a
+  kid-friendly adaptation of the *Privilege Walk* lets students physically step forward (strengths)
+  or backward (challenges) to value statements, then debrief — building self-awareness, empathy, and
+  class cohesion. *How:* §4a state machine (`setup→forward→backward→debrief`). The teacher picks one
+  of three reflection topics (`family` / `learning` / `social`); each carries `forward[]` (strengths)
+  and `backward[]` (challenges) statement arrays in an in-component `TOPICS` constant. The `forward`
+  phase shows a soft **emerald** screen with a gently-pulsing `ArrowUpwardIcon` and the cue "קחו צעד
+  אחד קדימה!"; `backward` transitions (MUI `Fade`) to a soft **amber** screen with `ArrowDownwardIcon`
+  and "קחו צעד אחד אחורה!". An MUI `Stepper` tracks progress per phase; the displayed count is
+  **data-driven** — `היגד X מתוך {forward.length}` in the strengths phase, then a continuing
+  `היגד {forward.length+i} מתוך {forward.length+backward.length}` in the challenges phase (the spec's
+  literal "מתוך 4/8" was reconciled to the actual 3+3 content). The `debrief` screen deliberately uses
+  **no confetti** — a calm `Fade` into 3 styled discussion-question `Card`s for a respectful
+  reflection atmosphere; "סיום פעילות" records the play via `markGameAsPlayedInClass(activeClassroomId,
+  'social-reflection-walk')` (only when a class is active) and `navigate('/')` back to the catalog
+  (explicit record+navigate per spec, rather than the passive `useMarkGamePlayed` hook). *Content
+  note:* `family`/`learning` statements are verbatim from the brief; `social` (חברים וחברה) had no
+  pool in the brief and its statements were **authored** here (age-appropriate Hebrew matching the
+  other topics' tone). Reuses `taxonomy.ts` (`social` / `elementary_high`, both already present) —
+  additive, no schema or taxonomy change.
 - **2026-06-24 — Added `SilentSyncTower` (13th game, "מגדל הסינכרון השקט") from idea-pool
   `social-009` (batch-2).** *Why:* needed a non-verbal whole-class coordination challenge that
   builds synchrony and group awareness — the "stand up exactly N students simultaneously" mechanic

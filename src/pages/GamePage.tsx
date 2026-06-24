@@ -24,6 +24,7 @@ import SentenceDetectives from '../games/SentenceDetectives';
 import LetterBridge from '../games/LetterBridge';
 import PunctuationOrchestra from '../games/PunctuationOrchestra';
 import RhymeExpress from '../games/RhymeExpress';
+import StepByStepReflection from '../games/StepByStepReflection';
 
 const games = registry as EducationalGame[];
 
@@ -51,6 +52,7 @@ const REGISTRY_MAP: Record<string, ComponentType<{ gameId?: string }>> = {
   LetterBridge: LetterBridge,
   PunctuationOrchestra: PunctuationOrchestra,
   RhymeExpress: RhymeExpress,
+  StepByStepReflection: StepByStepReflection,
 };
 
 function NotFound({ message }: { message: string }) {

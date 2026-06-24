@@ -169,5 +169,14 @@
     "subject": "social",
     "estimatedTimeMinutes": 15,
     "componentName": "DigitalPassParcel"
+  },
+  {
+    "id": "social-reflection-walk",
+    "title": "צעד צעד: מרוץ המודעות",
+    "description": "פעילות תנועתית ורגשית עוצמתית לכל הכיתה (התאמה של ה-Privilege Walk). התלמידים מיישרים קו וזזים קדימה או אחורה במרחב לפי הגדים ערכיים, ומגלים שלכל אחד יש קו זינוק ואתגרים משלו.",
+    "targetAge": "elementary_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 15,
+    "componentName": "StepByStepReflection"
   }
 ]

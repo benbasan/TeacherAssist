@@ -187,5 +187,14 @@
     "subject": "social",
     "estimatedTimeMinutes": 12,
     "componentName": "ClassroomSpeedDating"
+  },
+  {
+    "id": "social-odd-one-out",
+    "title": "אחד בחוץ: מפענחים את החוקיות",
+    "description": "משחק חברתי ופסיכולוגי חזק! תלמיד אחד יוצא מהכיתה והכיתה מקבלת חוקיות סודית לתגובות שלה. כשהוא חוזר, עליו לפענח את הקוד. כלי מטורף לעיבוד רגשי בנושאי לחץ חברתי, הדרה ומניעת חרמות.",
+    "targetAge": "elementary_high_and_junior_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 15,
+    "componentName": "OddOneOut"
   }
 ]

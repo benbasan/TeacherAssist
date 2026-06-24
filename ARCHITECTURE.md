@@ -72,7 +72,8 @@ src/
 │   ├── LetterBridge.tsx        # Hebrew spelling: koala crosses 5-plank bridge; each plank is a word with a missing homophonic letter (א/ע, ח/כ, ט/ת, ס/ש); two big letter buttons; wrong = plank shake (setup→playing→victory; §4a)
 │   ├── PunctuationOrchestra.tsx # Hebrew reading expression: giant sign cycles . ? ! on teacher click; class reads sentence with matching tone; drama-meter LinearProgress fills to victory (setup→playing→victory; §4a)
 │   ├── RhymeExpress.tsx        # Hebrew phonology: locomotive shows target word; 6 shuffled platform tiles (3 rhymes + 3 distractors); click correct → loads into wagon with spring animation; wrong → fall animation; train departs on full load (setup→playing→victory; §4a)
-│   └── StepByStepReflection.tsx # SEL movement+reflection (Privilege-Walk adaptation): pick topic → forward "strengths" statements (emerald, ↑) → backward "challenges" statements (amber, ↓) → respectful debrief cards, NO confetti (setup→forward→backward→debrief; §4a)
+│   ├── StepByStepReflection.tsx # SEL movement+reflection (Privilege-Walk adaptation): pick topic → forward "strengths" statements (emerald, ↑) → backward "challenges" statements (amber, ↓) → respectful debrief cards, NO confetti (setup→forward→backward→debrief; §4a)
+│   └── ClassroomSpeedDating.tsx # Timed conversation+rotation icebreaker: pick prompt pack + round duration → indigo countdown floor → teal "rotate one chair right" between 6 rounds → wrap-up discussion cards (setup→active→wrapup; §4a)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map

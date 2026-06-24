@@ -178,5 +178,14 @@
     "subject": "social",
     "estimatedTimeMinutes": 15,
     "componentName": "StepByStepReflection"
+  },
+  {
+    "id": "social-speed-dating",
+    "title": "ספיד דייט כיתתי",
+    "description": "משחק שיח ותנועה מהיר! הכיתה מתחלקת לשתי שורות פנים מול פנים, ומנהלת שיחות בזק בנות 30-45 שניות על סוגיות מצחיקות, עמוקות וחברתיות. בכל סיבוב מחליפים בני זוג וזזים כיסא אחד ימינה.",
+    "targetAge": "elementary_high_and_junior_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 12,
+    "componentName": "ClassroomSpeedDating"
   }
 ]

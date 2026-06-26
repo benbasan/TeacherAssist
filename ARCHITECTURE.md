@@ -43,14 +43,16 @@ src/
 │   ├── GameWrapper.tsx         # Shared frame around every game (title, chips, back button)
 │   ├── ClassSelectionGateway.tsx # Entry gatekeeper: "עם איזה כיתה משחקים היום?" class-picker grid
 │   ├── RequireActiveClass.tsx  # Gate: signed-in + no active class → render the gateway (wraps catalog/game)
-│   └── AttendanceDrawer.tsx    # Right-anchored collapsible Drawer; per-student present/absent switches
+│   ├── AttendanceDrawer.tsx    # Right-anchored collapsible Drawer; per-student present/absent switches
+│   └── TeacherWorkspaceLayout.tsx # Private-workspace shell: "do not project" banner + SignedIn gate (§10)
 ├── context/
 │   └── ClassroomContext.tsx    # Multi-classroom state/cloud layer (Clerk unsafeMetadata; see §8)
 ├── utils/
 │   └── parseNames.ts           # Shared roster parser (textarea → clean name list)
 ├── data/
 │   ├── games-registry.json     # SOURCE OF TRUTH: all games + metadata + componentName
-│   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries
+│   ├── tools-registry.json     # SOURCE OF TRUTH: Classroom Utilities (separate category; see §9)
+│   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries (games only)
 │   └── taxonomy.ts             # subject/targetAge → Hebrew labels + icon/color (catalog visuals)
 ├── games/
 │   ├── ComplimentGamePack.tsx  # 3-mode game pack (internal state machine; see §4a)
@@ -73,17 +75,33 @@ src/
 │   ├── PunctuationOrchestra.tsx # Hebrew reading expression: giant sign cycles . ? ! on teacher click; class reads sentence with matching tone; drama-meter LinearProgress fills to victory (setup→playing→victory; §4a)
 │   ├── RhymeExpress.tsx        # Hebrew phonology: locomotive shows target word; 6 shuffled platform tiles (3 rhymes + 3 distractors); click correct → loads into wagon with spring animation; wrong → fall animation; train departs on full load (setup→playing→victory; §4a)
 │   ├── StepByStepReflection.tsx # SEL movement+reflection (Privilege-Walk adaptation): pick topic → forward "strengths" statements (emerald, ↑) → backward "challenges" statements (amber, ↓) → respectful debrief cards, NO confetti (setup→forward→backward→debrief; §4a)
-│   └── ClassroomSpeedDating.tsx # Timed conversation+rotation icebreaker: pick prompt pack + round duration → indigo countdown floor → teal "rotate one chair right" between 6 rounds → wrap-up discussion cards (setup→active→wrapup; §4a)
+│   ├── ClassroomSpeedDating.tsx # Timed conversation+rotation icebreaker: pick prompt pack + round duration → indigo countdown floor → teal "rotate one chair right" between 6 rounds → wrap-up discussion cards (setup→active→wrapup; §4a)
+│   └── RumorExpress.tsx        # Media-literacy/anti-rumor "telephone game": pick story tier (12 stories ×3) → origin story with highlighted key facts → 45s transmission chain (3 reps, teacher peek) → Fact-Checker Lab split view + Information Integrity Meter → indigo/lavender fake-news debrief (setup→origin→chain→factcheck→reflection; §4a)
+├── tools/                      # Classroom Utilities (NON-game tools; see §9)
+│   ├── iconMap.tsx             # MUI icon-name string → icon component (tools' icon resolver)
+│   ├── RosterPanel.tsx         # Shared hybrid-names ingestion (active roster ⊖ absent | manual)
+│   ├── ToolWrapper.tsx         # Lightweight frame: title + description + back-to-/tools (no chips)
+│   ├── NameWheel.tsx           # Tool 1: Canvas wheel-of-fortune name picker
+│   ├── TeamMaker.tsx           # Tool 2: shuffle + split class into groups/pairs
+│   ├── MarbleJar.tsx           # Tool 3: cloud-persisted marble goal/reward tracker (§7, §9)
+│   └── ChoreBoard.tsx          # Tool 4: fair duty-roster board (cloud + guest fallback; §7, §9)
+├── teacher-tools/              # מרחב המורה — private, SignedIn-only back-office tools (§10)
+│   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
+│   └── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
 ├── pages/
 │   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
+│   ├── ToolsCatalogPage.tsx    # Grid of utility cards (reads tools-registry.json; §9)
+│   ├── ToolPage.tsx            # Resolves a tool by URL :toolId → renders via Tools Map (§9)
 │   ├── DashboardPage.tsx       # Teacher workspace: create/edit/delete saved classrooms (SignedIn)
+│   ├── TeacherWorkspacePage.tsx # מרחב המורה dashboard: office-tool cards (§10)
 │   └── WhatsNewPage.tsx        # Timeline rendered from whats-new.json
 ├── theme/
 │   ├── educationalTheme.ts     # MUI theme (indigo/teal, Rubik, rtl, borderRadius 16)
 │   └── rtlCache.ts             # Emotion cache for RTL CSS (key "muirtl")
 └── types/
-    └── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom contracts
+    ├── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom contracts
+    └── tool.types.ts           # ClassroomTool contract (utilities; §9)
 ```
 
 ---
@@ -103,6 +121,12 @@ src/
             <Route element={<AppLayout />}>      // Navbar + AttendanceDrawer + <Outlet/>
               "/"              → <RequireActiveClass><CatalogPage /></RequireActiveClass>
               "/game/:gameId"  → <RequireActiveClass><GamePage /></RequireActiveClass>
+              "/tools"         → <RequireActiveClass><ToolsCatalogPage /></RequireActiveClass>  // gated like the catalog (§9)
+              "/tools/:toolId" → <RequireActiveClass><ToolPage /></RequireActiveClass>          // gated; dynamic tool resolution (§9)
+              "/teacher-workspace" → <TeacherWorkspaceLayout/>   // ungated route, SignedIn-gated inside (§10)
+                  index               → <TeacherWorkspacePage/>     // office-tool dashboard
+                  "student-insights"  → <StudentInsights/>          // private תיק תלמיד tool
+                  "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
               "*"              → <Navigate to="/" replace />   // unknown path → catalog
@@ -275,8 +299,13 @@ Type contracts in `src/types/game.types.ts`:
 - **`EducationalGame`** — `id`, `title`, `description`, `targetAge`, `subject`,
   `estimatedTimeMinutes`, `componentName`.
 - **`WhatsNewEntry`** — `id`, `date`, `title`, `shortDescription`, `gameId?`.
-- **`Classroom`** — `id`, `name`, `students: string[]`, `playedGames: string[]` (cloud-persisted
-  per-teacher via Clerk; see §7). Re-exported from `ClassroomContext` for back-compat.
+- **`Classroom`** — `id`, `name`, `students: string[]`, `playedGames: string[]`, plus the Marble Jar
+  fields `marblesCount: number` (0), `marblesTarget: number` (30), `marblesReward: string`
+  ("צ'ופר כיתתי"), and the Chore Board fields `customChoresList: string[]` (`DEFAULT_CHORES`) +
+  `currentChoreAssignments: Record<string, string[]>` (`{}`), and the Student Insights field
+  `studentInsights?: Record<string, StudentInsight[]>` (`{}`), and the WhatsApp Generator field
+  `whatsappHistory?: WhatsappMessage[]` (`[]`) — all cloud-persisted per-teacher via Clerk; see §7.
+  Re-exported from `ClassroomContext` for back-compat.
 
 The registry stores compact keys for `subject` and `targetAge`. `src/data/taxonomy.ts` maps
 those to Hebrew labels and to the catalog's visual identity (`subjectMeta()` → `{ label, icon,
@@ -324,13 +353,20 @@ names) and reuse them across roster-based games — with **no backend**. Clerk p
 per-user cloud storage:
 
 - **Storage:** each teacher's classes live in `user.unsafeMetadata.classrooms` — an array of
-  `Classroom { id, name, students: string[], playedGames: string[] }` (type in
-  `src/types/game.types.ts`, re-exported from `ClassroomContext`). `playedGames` holds the ids of
-  games this class has finished (catalog history badges, §5). `unsafeMetadata` is the
-  **client-writable** Clerk metadata bucket (writable straight from the browser via
-  `user.update(...)`), which is exactly why it fits a serverless model. It is "unsafe" only in that
-  the client can write it; that is acceptable here because class rosters are non-sensitive. Legacy
-  classrooms saved before `playedGames` existed are normalized to `[]` on read.
+  `Classroom { id, name, students: string[], playedGames: string[], marblesCount, marblesTarget,
+  marblesReward, customChoresList, currentChoreAssignments, studentInsights, whatsappHistory }` (type in `src/types/game.types.ts`,
+  re-exported from `ClassroomContext`). `playedGames` holds the ids of games this class has finished
+  (catalog history badges, §5); the three `marbles*` fields hold the **Marble Jar** tool's per-class
+  state and the two `chore*` fields hold the **Smart Chore Board** tool's roles + current assignments
+  (§9) — *tool* state (not game history) persisted on a class. `unsafeMetadata` is the **client-writable** Clerk
+  metadata bucket (writable straight from the browser via `user.update(...)`), which is exactly why it
+  fits a serverless model. It is "unsafe" only in that the client can write it; that is acceptable here
+  because class rosters are non-sensitive; the mildly-sensitive `studentInsights` is mitigated by being
+  SignedIn-only, scoped to the teacher's own account, never projected (§10), and capped per student.
+  Legacy classrooms are **normalized on read** in the
+  `classrooms` `useMemo`: `playedGames` → `[]`, `marblesCount` → `0`, `marblesTarget` → `30`,
+  `marblesReward` → `"צ'ופר כיתתי"`, `customChoresList` → `DEFAULT_CHORES`,
+  `currentChoreAssignments` → `{}`, `studentInsights` → `{}`, `whatsappHistory` → `[]`.
 - **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
   place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
   (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
@@ -338,6 +374,18 @@ per-user cloud storage:
   `markGameAsPlayedInClass`, each of which rewrites the whole `classrooms` array via
   `user.update({ unsafeMetadata: { ...user.unsafeMetadata, classrooms: next } })`.
   `markGameAsPlayedInClass(classId, gameId)` appends `gameId` (deduped) to that class's `playedGames`.
+  The Marble Jar adds three more writers cut from the same cloth: `updateMarbles(classId, amount)`
+  (clamps `marblesCount` to `[0, marblesTarget]`), `setMarbleGoal(classId, target, reward)` (sets the
+  goal/reward and clamps a now-over-full count down to `target`), and `resetMarbleJar(classId)`
+  (`marblesCount` → 0). The Smart Chore Board adds three more: `saveChoresConfig(classId, choresList)`
+  (overwrites `customChoresList`, dropping assignments whose chore key was removed),
+  `updateChoreAssignments(classId, assignments)` (overwrites the chore→students map), and
+  `clearChoreAssignments(classId)` (→ `{}`). Student Insights adds two more:
+  `addStudentInsight(classId, studentName, type, tag, note)` (appends `{id, date, type, tag, note}` and
+  caps the student's array to the most recent **15** for the ~8KB metadata limit) and
+  `deleteStudentInsight(classId, studentName, insightId)`. The WhatsApp Generator adds
+  `addWhatsappToHistory(classId, text, tone)` (appends `{id, date, text, tone}`, capped to the most
+  recent **10**) and `deleteWhatsappFromHistory(classId, messageId)`.
 - **Session state (NOT persisted):** the same context also holds in-memory `activeClassroomId` and
   `absentStudents`, with `setActiveClassroom(id)` (clearing also resets attendance) and
   `toggleStudentAttendance(name)`. These are deliberately **not** written to Clerk, so every app
@@ -356,6 +404,139 @@ per-user cloud storage:
 - **Auth UI:** the Navbar uses Clerk's `<SignedIn>/<SignedOut>`, `<SignInButton>`, and
   `<UserButton>`. `UserButton` is Clerk's own widget — the single deliberate exception to the
   "MUI for all UI" guideline (everything else stays MUI).
+
+---
+
+## 9. Classroom Utilities (כלים לניהול כיתה) — a separate, non-game category
+
+Utilities are everyday teaching **tools** (pick a name, split into teams), **not** games. They have
+**no score, no win/lose, no game-over, and no `playedGames` history** — they stay live on the board
+until the teacher clicks "חזרה לקטלוג". The category deliberately mirrors the games architecture but
+runs on its **own parallel contract** so the two domains stay decoupled:
+
+| Concern        | Games                          | Utilities (this section) |
+| -------------- | ------------------------------ | ------------------------ |
+| Registry       | `data/games-registry.json`     | `data/tools-registry.json` |
+| Type           | `EducationalGame`              | `ClassroomTool` (`types/tool.types.ts`) |
+| Catalog page   | `CatalogPage` (`/`)            | `ToolsCatalogPage` (`/tools`) |
+| Dynamic route  | `/game/:gameId`                | `/tools/:toolId` |
+| Resolver       | `REGISTRY_MAP[componentName]`  | `TOOLS_MAP[tool.id]` (`ToolPage.tsx`) |
+| Frame          | `GameWrapper` (subject/time chips, records play) | `ToolWrapper` (title + description only) |
+| Icon           | emoji via `taxonomy.ts`        | MUI icon **name** string via `tools/iconMap.tsx` |
+| Gating         | `RequireActiveClass`           | `RequireActiveClass` (same as games) |
+| "What's New"   | listed in `whats-new.json`     | **excluded** (see Decision Log) |
+
+**`ClassroomTool`** = `{ id, title, description, icon }`. There is **no `componentName`** — a tool's
+`id` doubles as both the URL param and the Tools-Map key (the registry is small and hand-curated, so
+the extra indirection games need isn't worth it). `icon` is a **MUI Material icon name** (e.g.
+`"auto_stories"`, `"groups"`); `tools/iconMap.tsx` resolves it to a component with a `BuildRounded`
+fallback — the tools analogue of the games' emoji `taxonomy`.
+
+**Resolution flow on `/tools/:toolId`** (`ToolPage.tsx`): `useParams()` → find entry in
+`tools-registry.json` by `id` (not found → "הכלי לא נמצא") → `TOOLS_MAP[tool.id]` (not wired →
+"הכלי קיים אך עדיין לא חובר") → render `<ToolWrapper tool={tool}><Component/></ToolWrapper>`. Same
+two-stage 404 split as games (§4).
+
+**Why gated (same as the games catalog):** utilities are class-centric — they operate on the active
+roster — so a signed-in teacher must pick a class first. `/tools` and `/tools/:toolId` are wrapped in
+`RequireActiveClass`, exactly like `/` and `/game/:gameId`: a signed-in teacher with no active class
+sees the `ClassSelectionGateway` before reaching them. Because `RequireActiveClass` only gates
+*signed-in* users, signed-out visitors still pass straight through and use the tools' manual
+name-entry **guest mode** — identical to how the catalog stays open to anonymous visitors.
+
+**Hybrid-names ingestion (shared `tools/RosterPanel.tsx`):** both tools take their roster the same way
+recent games do (e.g. `ComplimentTimeBomb`): if a class is active, auto-load
+`activeClassroom.students` minus `absentStudents` (+ an "add guest" field); otherwise a manual
+paste-in `TextField` via `parseNames`. The logic is **extracted into one component** (rather than
+inlined per tool as the games do) because the two tools share it verbatim; it renders the setup UI and
+calls `onReady(names)` once `names.length >= min` (wheel `min=1`, team-maker `min=2`).
+
+**The tools:**
+- **`NameWheel.tsx`** (pure utility) — an HTML5 **Canvas** wheel-of-fortune. Sectors (one per present
+  name) are drawn in the brand palette; "סובב את הגלגל! 🎡" spins via `requestAnimationFrame` with
+  eased deceleration (~3–4s) onto a pre-picked random index. A winner `Dialog` (+ a small
+  `canvas-confetti` burst) offers "הסר שם זה מהסיבובים הבאים" (drop from the pool so the same child
+  isn't picked twice) and "סובב שוב".
+- **`TeamMaker.tsx`** (pure utility) — Fisher-Yates shuffles the roster, then partitions by **Mode A**
+  (target number of teams) or **Mode B** (students per team), chosen via a toggle + `Slider`. Renders
+  a responsive grid of colored team cards (named "קבוצה N" or fun animal-team names); "ערבב מחדש 🔄"
+  re-rolls.
+- **`MarbleJar.tsx`** (**cloud-stateful** — the exception to the roster-only tools) — a positive-
+  reinforcement goal tracker. Unlike tools 1–2 it reads/writes **per-class cloud state** via
+  `updateMarbles` / `setMarbleGoal` / `resetMarbleJar` (§7), so progress survives reloads and shows in
+  the navbar. Glass jar (`border:'4px solid #b2dfdb'`, `borderRadius:'0 0 40px 40px'`) fills with
+  pastel marble circles (CSS `@keyframes mjDrop` animates only newly-mounted marbles); giant "+1"
+  (teal) / "+3" (indigo) / "-1" controls; a collapsible config panel sets the goal (20/30/50) + reward
+  text. At `marblesCount === marblesTarget` the controls are replaced by a celebratory view (confetti
+  + success tone + "🏆 כל הכבוד! הצנצנת מלאה!" + reward + "התחל צנצנת חדשה 🔄" → reset). **Scenario A**
+  (no active class — i.e. a signed-out guest, since `/tools` is gated) shows an `Alert` + a
+  "בחרו או צרו כיתה" shortcut to `/dashboard`, because cloud persistence is the point of this tool. The
+  `Navbar` shows a live `🫙 count/target` mini-indicator beside the active-class chip whenever a class
+  is active.
+- **`ChoreBoard.tsx`** (**cloud-stateful with a real guest fallback** — the first tool to do both) — a
+  fair duty-roster board. In **class mode** it reads the present roster (students ⊖ absentees), and the
+  class's `customChoresList` / `currentChoreAssignments`, persisting edits via `saveChoresConfig` /
+  `updateChoreAssignments` / `clearChoreAssignments` (§7). In **guest mode** (signed out) it opens a
+  split setup (names `TextField` + an editable chores `TextField` preloaded with `DEFAULT_CHORES`),
+  then runs the same board on **local state** with no cloud writes. Both paths render one mode-agnostic
+  `<Board>` fed by `{ names, chores, assignments }` + handlers. "סובב תורנויות! 🔄" validates
+  `names ≥ chores`, runs a 2s name-flicker suspense (`setInterval`, cleaned up via refs), then
+  Fisher-Yates-shuffles the present students and **round-robin** assigns them (`student[i] →
+  chores[i % n]`) — even split, each student exactly once — and fires a `canvas-confetti` sparkle. A
+  collapsible settings panel adds/deletes chore roles; "נקה לוח 🗑️" clears assignments; empty chores
+  show "טרם שובצו תורנים ❓".
+
+**Adding a utility:** (1) create the component in `src/tools/`; (2) add a `{ id, title, description,
+icon }` entry to `tools-registry.json`; (3) register `id → Component` in `TOOLS_MAP` (`ToolPage.tsx`);
+(4) if the entry uses a new icon name, add it to `tools/iconMap.tsx`. No `whats-new.json` entry, no
+`taxonomy.ts` change.
+
+---
+
+## 10. Teacher's Private Workspace (מרחב המורה)
+
+A **third top-level category**, separate from the student-facing smartboard games and `/tools`
+utilities: a private teacher back-office that must **never be projected** in class. First tool: the
+**Student Insights** log (`src/teacher-tools/StudentInsights.tsx`).
+
+- **Routing:** a layout route `/teacher-workspace` (`TeacherWorkspaceLayout`) nested under `AppLayout`,
+  with child routes `index` → `TeacherWorkspacePage` (office-tool dashboard) and `student-insights` →
+  `StudentInsights`. Like `/dashboard` the route is **ungated by `RequireActiveClass`**, but the layout
+  **gates its content behind Clerk `<SignedIn>`** (a `<SignedOut>` sign-in prompt otherwise) because it
+  holds student data. The layout also renders a **persistent privacy banner** ("🔒 שולחן עבודה פרטי…
+  אין להקרין מסך זה…") on every workspace page.
+- **Navbar:** a distinct, SignedIn-only "💼 מרחב המורה" outlined link with a Tooltip
+  ("שולחן עבודה פרטי - לא להקרנה בכיתה"), active for `pathname.startsWith('/teacher-workspace')`.
+- **Decoupled class selection (key design choice):** `StudentInsights` keeps a **local**
+  `selectedClassId` (seeded from `activeClassroomId` but it **never calls `setActiveClassroom`**), so
+  reviewing records — possibly at home — does not disturb the smartboard teaching session / attendance.
+  No active class? It shows a class picker over the teacher's saved `classrooms` (or a link to
+  `/dashboard` if none exist).
+- **UI:** professional/crisp (plain `Paper`/`Divider`, no pastel gradients/confetti). RTL split via a
+  `Box` CSS-grid `{ xs:'1fr', md:'300px 1fr' }` — first column renders on the right (student roster
+  `List` with per-student insight-count chips); the left main pane is the selected student's profile:
+  summary counts, a log form (type `ToggleButtonGroup` 👍/📝/⚠️ + a type-scoped tag `Select` + note),
+  and a **custom vertical timeline** (newest first) with color-coded type icons, tag chip, note, date,
+  and a delete button.
+- **Persistence:** per-class via `studentInsights` on `Classroom` (§7), written with
+  `addStudentInsight` (capped to the latest **15/student**) / `deleteStudentInsight`.
+- **No `@mui/lab`:** the brief allowed "`@mui/lab/Timeline` **or** a vertical list"; since `@mui/lab`
+  isn't a dependency, the timeline is hand-built from MUI core — no new dependency, no build risk.
+
+**Second tool — `CommunicationGenerator.tsx` ("מחולל סיכומי וואטסאפ"):** generates a weekly parent
+message and keeps a cloud archive of sent ones. Same local-class-selection pattern as `StudentInsights`.
+A tone `ToggleButtonGroup` (חגיגי/ענייני/מעודד/רגוע) drives an **auto-drafted** Hebrew summary —
+`generateDraft` pulls the class's recent **positive** `studentInsights` as highlight bullets (graceful
+generic line if none) — shown in an editable `TextField` with a live **simulated WhatsApp phone
+preview**. "שגר ישירות לוואטסאפ" opens the `wa.me` deep link **and** archives; "סמן כנשלח ושמור
+בארכיון" archives only — both via `addWhatsappToHistory` (§7, capped to 10). The **"📜 ארכיון הודעות
+שנשלחו"** section under the preview lists past messages newest-first as `Accordion`s (Hebrew date +
+color-coded tone `Chip`), each with "העתק מחדש" (`navigator.clipboard` + `Snackbar`) and "מחק"
+(`deleteWhatsappFromHistory`).
+
+**Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
+`/teacher-workspace`, and add a card to `TeacherWorkspacePage`. (One "בקרוב" placeholder card remains —
+"אדריכל השיעור" — marking the roadmap.)
 
 ---
 
@@ -660,3 +841,93 @@ Append a dated entry here for every significant technical decision.
   (same convention as social-003/WouldYouRather). Hybrid names: Scenario A auto-loads active roster
   + guest-add field; Scenario B paste-in TextField — names are for class-badge context only and do
   not drive mechanics. Records via `useMarkGamePlayed` on `victory`.
+
+- **2026-06-26 — Added "Classroom Utilities" (כלים לניהול כיתה): a separate top-level category +
+  first two tools (`NameWheel`, `TeamMaker`).** *Why:* teachers need everyday classroom *tools*
+  (pick a name, split into teams) that are categorically **not** games — no score, no win/lose, no
+  history. Folding them into the games registry with a `kind` flag would have polluted every game
+  consumer (`CatalogPage` filters, `GameWrapper`'s subject/time chips, `useMarkGamePlayed`, the
+  history badges) with "is this actually a game?" branches. *How:* a **parallel contract** that mirrors
+  the proven games pipeline but in its own files (§9): `tools-registry.json` → `ToolsCatalogPage`
+  (`/tools`) → `/tools/:toolId` → `TOOLS_MAP` in `ToolPage` → `ToolWrapper`. `ClassroomTool` has **no
+  `componentName`** (the `id` is the Tools-Map key — the registry is small and hand-curated).
+  *Scope choices:* (a) routes are **gated by `RequireActiveClass`, same as the games catalog** — a
+  signed-in teacher picks an active class first (the tools operate on the active roster). *This
+  reversed the initial "ungated" choice per user request, to match the games-catalog flow.* Signed-out
+  **guest mode** is preserved because `RequireActiveClass` only gates signed-in users — anonymous
+  visitors pass through to the tools' manual name entry. (b) **excluded from `whats-new.json`** because `WhatsNewEntry` deep-links
+  to `/game/:id` and tools are a different category — announcing them there would 404 or require
+  bending the games timeline contract; (c) hybrid-names ingestion **extracted** into a shared
+  `RosterPanel` (the games inline it, but the two tools share it verbatim); (d) the wheel is an HTML5
+  **Canvas** wheel-of-fortune (true to "גלגל המזל") rather than a CSS slot reel. Tools use **MUI icon
+  names** (`tools/iconMap.tsx`) instead of the games' emoji `taxonomy`, per the registry's `icon`
+  field. No changes to `games-registry.json`, `taxonomy.ts`, or `whats-new.json`.
+
+- **2026-06-26 — Added Marble Jar (tool #3, "צנצנת השיש הדיגיטלית") — first cloud-persisted tool
+  state.** *Why:* a goal/reward tracker must **remember** progress across reloads and sessions and be
+  visible globally (navbar), so its state cannot be session/local like the wheel's removed-names or the
+  team-maker's shuffle — it belongs on the class. *How:* extended the `Classroom` contract with
+  `marblesCount` (0) / `marblesTarget` (30) / `marblesReward` ("צ'ופר כיתתי"), persisted in Clerk
+  `unsafeMetadata` exactly like `playedGames`, with the same **normalize-on-read** safety for legacy
+  rows (§7). Three new context writers — `updateMarbles` (clamped `[0, target]`), `setMarbleGoal`
+  (sets goal+reward, clamps an over-full count down), `resetMarbleJar` — all modeled on
+  `markGameAsPlayedInClass` (find target → rewrite whole array via `persist`). The component reads
+  count/target/reward straight off `activeClassroom` (not local state) so the jar and the navbar
+  `🫙 count/target` indicator stay in lock-step. *Scope choices:* (a) **Scenario A** (no active class)
+  is effectively the signed-out path given `/tools` gating, so it shows an `Alert` + a
+  "בחרו או צרו כיתה" shortcut rather than a local fallback — persistence is the whole point; (b) the
+  victory view replaces the controls (rather than just disabling them) so a full jar can't be
+  over-filled; (c) marble drop animation uses a CSS keyframe on stable-keyed marbles so only new
+  marbles animate. No `whats-new.json` entry (tools-excluded, per the prior decision).
+
+- **2026-06-26 — Added Smart Chore Board (tool #4, "לוח תורנויות כיתה חכם") — first tool that is both
+  cloud-stateful and guest-capable.** *Why:* a duty roster must remember chore roles + the current
+  draw per class (so it survives reloads), yet the brief also requires a working **guest** mode. *How:*
+  extended `Classroom` with `customChoresList: string[]` (default `DEFAULT_CHORES`, exported from
+  `game.types.ts`) and `currentChoreAssignments: Record<string, string[]>` (`{}`), persisted +
+  normalized-on-read like the marble fields (§7); three writers `saveChoresConfig` /
+  `updateChoreAssignments` / `clearChoreAssignments` modeled on the marble writers. `ChoreBoard`
+  resolves a mode from `activeClassroom`: **class mode** reads the present roster (students ⊖
+  absentees, reusing the `RosterPanel` filter idiom) and reads/writes cloud state; **guest mode**
+  (signed-out, since `/tools` is gated) shows a split names/chores setup and runs on local `useState`.
+  Both feed one presentational `<Board>` via handlers, so the UI isn't branched. *Scope choices:*
+  (a) MarbleJar deliberately had no guest fallback (persistence was its whole point), but ChoreBoard
+  ships one per the brief — the dispatch-to-cloud-or-local handler pattern keeps it clean;
+  (b) **fair assignment** = Fisher-Yates shuffle + round-robin `i % chores.length`, which guarantees an
+  even split (±1) and that no student gets two chores in one draw; (c) `saveChoresConfig` prunes
+  assignments for deleted chores so the board can't render orphaned roles; (d) a spin is **blocked**
+  (MUI `Alert`) when `present students < chores`, so every role gets at least one tornan; (e) the
+  responsive board uses the repo's `Box` CSS-grid convention (as `TeamMaker`/`CatalogPage`), not MUI
+  `Grid`. No `whats-new.json` entry (tools-excluded).
+
+- **2026-06-26 — Added "מרחב המורה" (Teacher's Private Workspace) — a third, private top-level category
+  + its first tool, Student Insights (תיק תלמיד).** *Why:* teachers need a back-office for sensitive,
+  per-student pedagogical records that is categorically distinct from student-facing games/utilities and
+  must never be projected. *How:* a `/teacher-workspace` layout route (`TeacherWorkspaceLayout`) nested
+  under `AppLayout` with `index`→`TeacherWorkspacePage` and `student-insights`→`StudentInsights` (§10);
+  `Classroom` gained `studentInsights?: Record<string, StudentInsight[]>` persisted in Clerk
+  `unsafeMetadata` like the other tool state, with writers `addStudentInsight`/`deleteStudentInsight`.
+  *Scope choices:* (a) **privacy posture** — route is ungated by `RequireActiveClass` but SignedIn-gated
+  inside the layout, with a persistent "do not project" banner and a SignedIn-only, visually distinct
+  navbar link; the UI is deliberately crisp/professional (no pastels/confetti) to differentiate from
+  student-facing tools. (b) **class selection is local and decoupled** — the tool seeds from
+  `activeClassroomId` but never calls `setActiveClassroom`, so reviewing records doesn't mutate the
+  smartboard teaching session/attendance. (c) **15-insight cap per student** in `addStudentInsight`
+  guards Clerk's ~8KB metadata limit. (d) **no `@mui/lab`** — the brief allowed a vertical list, so the
+  timeline is hand-built from MUI core rather than adding a dependency. No `whats-new.json` /
+  `tools-registry.json` / `games-registry.json` / `taxonomy.ts` changes (neither a game nor a `/tools`
+  utility).
+
+- **2026-06-26 — Added the WhatsApp Generator (2nd מרחב המורה tool) + a cloud sent-history archive.**
+  *Why:* teachers wanted a quick parent-summary generator with a persistent log of what was sent. The
+  brief framed it as "updating" an existing tool, but it **didn't exist** (only a "בקרוב" placeholder) —
+  so it was built from scratch (confirmed with the user). *How:* `Classroom` gained
+  `whatsappHistory?: WhatsappMessage[]` persisted in Clerk `unsafeMetadata`, with
+  `addWhatsappToHistory`/`deleteWhatsappFromHistory` writers cut from the `addStudentInsight` cloth;
+  `CommunicationGenerator` is the second tool under `/teacher-workspace` (§10). *Scope choices:*
+  (a) the message **auto-drafts from `studentInsights`** (recent positives → highlight bullets), then is
+  freely editable — chosen over a blank-template form so the §10 Insights tool pays off; (b) a **10-record
+  cap** per class guards the ~8KB metadata limit; (c) "send" uses the public **`wa.me` deep link** (no
+  WhatsApp API/backend) and archives in the same click; (d) reuses the §10 local, session-decoupled
+  class selection + privacy posture; the previously-disabled dashboard card is now enabled. No new
+  dependency; no registry/`whats-new`/`taxonomy` changes.

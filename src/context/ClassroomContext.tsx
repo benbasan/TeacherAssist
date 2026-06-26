@@ -1,7 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import type { Classroom } from '../types/game.types';
+import type { Classroom, InsightType } from '../types/game.types';
+import { DEFAULT_CHORES } from '../types/game.types';
+
+/** Max insights kept per student — guards Clerk's ~8KB `unsafeMetadata` limit. */
+const MAX_INSIGHTS_PER_STUDENT = 15;
+
+/** Max archived parent messages kept per class — same 8KB metadata guard. */
+const MAX_WHATSAPP_HISTORY = 10;
 
 // Re-exported for backward compatibility: `Classroom` now lives with the other
 // domain types in `src/types/game.types.ts`.
@@ -31,6 +38,47 @@ interface ClassroomContextValue {
   toggleStudentAttendance: (studentName: string) => void;
   /** Append a game id to a class's `playedGames` (cloud-persisted, deduped). */
   markGameAsPlayedInClass: (classId: string, gameId: string) => Promise<void>;
+
+  // --- Marble Jar tool (cloud-persisted per class) --------------------------
+  /** Add/subtract marbles, clamped to [0, marblesTarget]. */
+  updateMarbles: (classId: string, amount: number) => Promise<void>;
+  /** Set the goal capacity + custom reward text (clamps count down if needed). */
+  setMarbleGoal: (classId: string, target: number, reward: string) => Promise<void>;
+  /** Reset the jar's `marblesCount` back to 0. */
+  resetMarbleJar: (classId: string) => Promise<void>;
+
+  // --- Smart Chore Board tool (cloud-persisted per class) -------------------
+  /** Overwrite a class's chore roles (drops assignments for removed chores). */
+  saveChoresConfig: (classId: string, choresList: string[]) => Promise<void>;
+  /** Save the chore → students assignment map. */
+  updateChoreAssignments: (
+    classId: string,
+    assignments: Record<string, string[]>,
+  ) => Promise<void>;
+  /** Reset the assignment map to empty. */
+  clearChoreAssignments: (classId: string) => Promise<void>;
+
+  // --- Student Insights tool (Teacher's Private Workspace; cloud-persisted) --
+  /** Append a pedagogical insight for a student (capped to the most recent 15). */
+  addStudentInsight: (
+    classId: string,
+    studentName: string,
+    type: InsightType,
+    tag: string,
+    note: string,
+  ) => Promise<void>;
+  /** Remove a single insight entry by id. */
+  deleteStudentInsight: (
+    classId: string,
+    studentName: string,
+    insightId: string,
+  ) => Promise<void>;
+
+  // --- WhatsApp Generator tool (Teacher's Private Workspace; cloud-persisted) -
+  /** Archive a sent parent message (capped to the most recent 10). */
+  addWhatsappToHistory: (classId: string, text: string, tone: string) => Promise<void>;
+  /** Remove a single archived message by id. */
+  deleteWhatsappFromHistory: (classId: string, messageId: string) => Promise<void>;
 }
 
 const ClassroomContext = createContext<ClassroomContextValue | null>(null);
@@ -52,8 +100,18 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
 
   const classrooms = useMemo<Classroom[]>(() => {
     const raw = (user?.unsafeMetadata?.classrooms as Classroom[] | undefined) ?? [];
-    // Normalize legacy classrooms that predate `playedGames`.
-    return raw.map((c) => ({ ...c, playedGames: c.playedGames ?? [] }));
+    // Normalize legacy classrooms that predate `playedGames` / the Marble Jar fields.
+    return raw.map((c) => ({
+      ...c,
+      playedGames: c.playedGames ?? [],
+      marblesCount: c.marblesCount ?? 0,
+      marblesTarget: c.marblesTarget ?? 30,
+      marblesReward: c.marblesReward ?? "צ'ופר כיתתי",
+      customChoresList: c.customChoresList ?? DEFAULT_CHORES,
+      currentChoreAssignments: c.currentChoreAssignments ?? {},
+      studentInsights: c.studentInsights ?? {},
+      whatsappHistory: c.whatsappHistory ?? [],
+    }));
   }, [user?.unsafeMetadata]);
 
   const [activeClassroomId, setActiveClassroomId] = useState<string | null>(null);
@@ -82,6 +140,13 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         name,
         students,
         playedGames: [],
+        marblesCount: 0,
+        marblesTarget: 30,
+        marblesReward: "צ'ופר כיתתי",
+        customChoresList: DEFAULT_CHORES,
+        currentChoreAssignments: {},
+        studentInsights: {},
+        whatsappHistory: [],
       };
       await persist([...classrooms, classroom]);
     },
@@ -130,6 +195,164 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [classrooms, persist],
   );
 
+  const updateMarbles = useCallback(
+    async (classId: string, amount: number) => {
+      const target = classrooms.find((c) => c.id === classId);
+      if (!target) return;
+      const next = Math.max(0, Math.min(target.marblesTarget, target.marblesCount + amount));
+      if (next === target.marblesCount) return; // no-op at the clamp boundary
+      await persist(
+        classrooms.map((c) => (c.id === classId ? { ...c, marblesCount: next } : c)),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const setMarbleGoal = useCallback(
+    async (classId: string, target: number, reward: string) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId
+            ? {
+                ...c,
+                marblesTarget: target,
+                marblesReward: reward,
+                // A lowered goal can't leave an over-full jar.
+                marblesCount: Math.min(c.marblesCount, target),
+              }
+            : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const resetMarbleJar = useCallback(
+    async (classId: string) => {
+      await persist(
+        classrooms.map((c) => (c.id === classId ? { ...c, marblesCount: 0 } : c)),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const saveChoresConfig = useCallback(
+    async (classId: string, choresList: string[]) => {
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          // Drop assignments for chores that no longer exist.
+          const kept: Record<string, string[]> = {};
+          for (const chore of choresList) {
+            if (c.currentChoreAssignments[chore]) kept[chore] = c.currentChoreAssignments[chore];
+          }
+          return { ...c, customChoresList: choresList, currentChoreAssignments: kept };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const updateChoreAssignments = useCallback(
+    async (classId: string, assignments: Record<string, string[]>) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId ? { ...c, currentChoreAssignments: assignments } : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const clearChoreAssignments = useCallback(
+    async (classId: string) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId ? { ...c, currentChoreAssignments: {} } : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const addStudentInsight = useCallback(
+    async (
+      classId: string,
+      studentName: string,
+      type: InsightType,
+      tag: string,
+      note: string,
+    ) => {
+      const insight = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        type,
+        tag,
+        note,
+      };
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const all = c.studentInsights ?? {};
+          const forStudent = all[studentName] ?? [];
+          // Keep only the most recent 15 to stay under Clerk's metadata limit.
+          const next = [...forStudent, insight].slice(-MAX_INSIGHTS_PER_STUDENT);
+          return { ...c, studentInsights: { ...all, [studentName]: next } };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const deleteStudentInsight = useCallback(
+    async (classId: string, studentName: string, insightId: string) => {
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const all = c.studentInsights ?? {};
+          const forStudent = all[studentName] ?? [];
+          return {
+            ...c,
+            studentInsights: {
+              ...all,
+              [studentName]: forStudent.filter((entry) => entry.id !== insightId),
+            },
+          };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const addWhatsappToHistory = useCallback(
+    async (classId: string, text: string, tone: string) => {
+      const message = { id: crypto.randomUUID(), date: new Date().toISOString(), text, tone };
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const history = c.whatsappHistory ?? [];
+          // Keep only the most recent 10 to stay under Clerk's metadata limit.
+          const next = [...history, message].slice(-MAX_WHATSAPP_HISTORY);
+          return { ...c, whatsappHistory: next };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const deleteWhatsappFromHistory = useCallback(
+    async (classId: string, messageId: string) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId
+            ? { ...c, whatsappHistory: (c.whatsappHistory ?? []).filter((m) => m.id !== messageId) }
+            : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
   const value = useMemo<ClassroomContextValue>(
     () => ({
       classrooms,
@@ -144,6 +367,16 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       setActiveClassroom,
       toggleStudentAttendance,
       markGameAsPlayedInClass,
+      updateMarbles,
+      setMarbleGoal,
+      resetMarbleJar,
+      saveChoresConfig,
+      updateChoreAssignments,
+      clearChoreAssignments,
+      addStudentInsight,
+      deleteStudentInsight,
+      addWhatsappToHistory,
+      deleteWhatsappFromHistory,
     }),
     [
       classrooms,
@@ -158,6 +391,16 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       setActiveClassroom,
       toggleStudentAttendance,
       markGameAsPlayedInClass,
+      updateMarbles,
+      setMarbleGoal,
+      resetMarbleJar,
+      saveChoresConfig,
+      updateChoreAssignments,
+      clearChoreAssignments,
+      addStudentInsight,
+      deleteStudentInsight,
+      addWhatsappToHistory,
+      deleteWhatsappFromHistory,
     ],
   );
 

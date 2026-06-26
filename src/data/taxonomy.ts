@@ -34,6 +34,7 @@ export const TARGET_AGE_LABELS: Record<string, string> = {
   elementary_low: 'יסודי — שכבה צעירה',
   elementary_high: 'יסודי — שכבה בוגרת',
   elementary_high_and_junior_high: 'יסודי בוגר וחטיבת ביניים',
+  elementary_to_high: 'יסודי עד תיכון',
   middle: 'חטיבת ביניים',
   high: 'תיכון',
 };

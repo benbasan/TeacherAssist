@@ -187,5 +187,14 @@
     "subject": "social",
     "estimatedTimeMinutes": 12,
     "componentName": "ClassroomSpeedDating"
+  },
+  {
+    "id": "social-rumor-express",
+    "title": "רכבת השמועות: איך נולד פייק ניוז?",
+    "description": "ניסוי חברתי בסגנון 'טלפון שבור' דיגיטלי: 3 נציגים מעבירים סיפור זה לזה, ובמעבדת חשיפת האמת בודקים כמה פרטים שרדו בדרך. כלי עוצמתי לאוריינות מדיה — איך נולדים שמועות ופייק ניוז, ומה האחריות שלנו לפני שלוחצים 'העבר'. 3 רמות קושי מיסודי ועד תיכון.",
+    "targetAge": "elementary_to_high",
+    "subject": "social",
+    "estimatedTimeMinutes": 15,
+    "componentName": "RumorExpress"
   }
 ]

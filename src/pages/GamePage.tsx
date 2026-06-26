@@ -26,6 +26,7 @@ import PunctuationOrchestra from '../games/PunctuationOrchestra';
 import RhymeExpress from '../games/RhymeExpress';
 import StepByStepReflection from '../games/StepByStepReflection';
 import ClassroomSpeedDating from '../games/ClassroomSpeedDating';
+import RumorExpress from '../games/RumorExpress';
 
 const games = registry as EducationalGame[];
 
@@ -55,6 +56,7 @@ const REGISTRY_MAP: Record<string, ComponentType<{ gameId?: string }>> = {
   RhymeExpress: RhymeExpress,
   StepByStepReflection: StepByStepReflection,
   ClassroomSpeedDating: ClassroomSpeedDating,
+  RumorExpress: RumorExpress,
 };
 
 function NotFound({ message }: { message: string }) {

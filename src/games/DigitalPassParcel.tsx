@@ -10,6 +10,8 @@ import {
   IconButton,
   Zoom,
   Fade,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import StopRoundedIcon from '@mui/icons-material/StopRounded';
@@ -18,20 +20,25 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/digital-pass-parcel-content.json';
 
 type Task = { emoji: string; text: string };
 
-const TASKS: Task[] = [
-  { emoji: '👕', text: 'מצא ילד בכיתה עם חולצה באותו צבע כמו שלך ותן לו גרובי-פיסט!' },
-  { emoji: '😂', text: 'נסה להצחיק את המורה בתוך 20 שניות — ללא מגע!' },
-  { emoji: '🙏', text: 'בחר חבר מהכיתה ואמור לו תודה על משהו טוב שעשה השבוע.' },
-  { emoji: '🕺', text: 'עשה את הריקוד הכי מביך שאתה יודע — 10 שניות שלמות!' },
-  { emoji: '📣', text: 'צעק שלוש פעמים: "הכיתה שלנו היא הכיתה הכי טובה!"' },
-  { emoji: '🎭', text: 'עשה פרצוף הכי מצחיק שאתה יכול — הכיתה מחקה אחריך!' },
-  { emoji: '🌟', text: 'תן מחמאה אמיתית לאחד שיושב לפניך / לידך.' },
-  { emoji: '🤸', text: "קפוץ 5 קפיצות ג'אמפינג ג'ק — הכיתה סופרת בקול!" },
-  { emoji: '🧩', text: 'ספר לכיתה דבר מפתיע שאף אחד כנראה לא יודע עליך.' },
-  { emoji: '🫂', text: 'תן עידוד לשלושה חברים שונים — כל אחד בצורה אחרת!' },
+// Task pools live in external JSON (see CLAUDE.md → Game Content & Architecture Rules),
+// keyed by age cohort so the teacher can tune the tone to the class.
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortTasks {
+  label: string;
+  tasks: Task[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortTasks>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const WRAP_COLORS = [
@@ -178,6 +185,7 @@ export default function DigitalPassParcel({ gameId }: { gameId?: string }) {
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [manualInput, setManualInput] = useState('');
   const [musicStyle, setMusicStyle] = useState('pop');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
 
   const [stage, setStage] = useState<Stage>('setup');
   const [round, setRound] = useState(0);
@@ -194,17 +202,19 @@ export default function DigitalPassParcel({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
+  const tasks = CONTENT[ageGroup].tasks;
+
   function pickTask(): Task {
-    const available = TASKS.map((_, i) => i).filter(
+    const available = tasks.map((_, i) => i).filter(
       (i) => !usedIndicesRef.current.includes(i),
     );
     if (available.length === 0) {
       usedIndicesRef.current = [];
-      return TASKS[0];
+      return tasks[0];
     }
     const idx = available[Math.floor(Math.random() * available.length)];
     usedIndicesRef.current = [...usedIndicesRef.current, idx];
-    return TASKS[idx];
+    return tasks[idx];
   }
 
   function doStop() {
@@ -340,6 +350,29 @@ export default function DigitalPassParcel({ gameId }: { gameId?: string }) {
             )}
           </Paper>
         )}
+
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימות המשימות?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => {
+            if (v) {
+              setAgeGroup(v as AgeGroupKey);
+              usedIndicesRef.current = [];
+            }
+          }}
+          color="secondary"
+          fullWidth
+          sx={{ mb: 4, flexWrap: 'wrap' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ fontWeight: 700, py: 1.2 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
 
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
           בחרו סגנון מוזיקה:

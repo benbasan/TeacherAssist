@@ -1,0 +1,158 @@
+{
+  "lower_elementary": {
+    "label": "כיתות א'-ג'",
+    "categories": {
+      "animals": {
+        "en": "Animals",
+        "he": "חיות",
+        "emoji": "🐾",
+        "words": [
+          { "en": "DOG", "he": "כלב" },
+          { "en": "CAT", "he": "חתול" },
+          { "en": "LION", "he": "אריה" },
+          { "en": "BEAR", "he": "דוב" },
+          { "en": "FISH", "he": "דג" },
+          { "en": "BIRD", "he": "ציפור" },
+          { "en": "HORSE", "he": "סוס" },
+          { "en": "COW", "he": "פרה" },
+          { "en": "FROG", "he": "צפרדע" },
+          { "en": "DUCK", "he": "ברווז" }
+        ]
+      },
+      "food": {
+        "en": "Food",
+        "he": "אוכל",
+        "emoji": "🍎",
+        "words": [
+          { "en": "APPLE", "he": "תפוח" },
+          { "en": "BREAD", "he": "לחם" },
+          { "en": "MILK", "he": "חלב" },
+          { "en": "RICE", "he": "אורז" },
+          { "en": "EGG", "he": "ביצה" },
+          { "en": "CHEESE", "he": "גבינה" },
+          { "en": "CAKE", "he": "עוגה" },
+          { "en": "BANANA", "he": "בננה" },
+          { "en": "PIZZA", "he": "פיצה" },
+          { "en": "SOUP", "he": "מרק" }
+        ]
+      },
+      "colors": {
+        "en": "Colors",
+        "he": "צבעים",
+        "emoji": "🎨",
+        "words": [
+          { "en": "RED", "he": "אדום" },
+          { "en": "BLUE", "he": "כחול" },
+          { "en": "GREEN", "he": "ירוק" },
+          { "en": "YELLOW", "he": "צהוב" },
+          { "en": "BLACK", "he": "שחור" },
+          { "en": "WHITE", "he": "לבן" },
+          { "en": "PINK", "he": "ורוד" },
+          { "en": "BROWN", "he": "חום" },
+          { "en": "PURPLE", "he": "סגול" },
+          { "en": "ORANGE", "he": "כתום" }
+        ]
+      }
+    }
+  },
+  "upper_elementary": {
+    "label": "כיתות ד'-ו'",
+    "categories": {
+      "school": {
+        "en": "School",
+        "he": "בית ספר",
+        "emoji": "🏫",
+        "words": [
+          { "en": "PENCIL", "he": "עיפרון" },
+          { "en": "BOOK", "he": "ספר" },
+          { "en": "TEACHER", "he": "מורה" },
+          { "en": "DESK", "he": "שולחן" },
+          { "en": "RULER", "he": "סרגל" },
+          { "en": "BOARD", "he": "לוח" },
+          { "en": "BAG", "he": "תיק" },
+          { "en": "ERASER", "he": "מחק" }
+        ]
+      },
+      "body": {
+        "en": "Body",
+        "he": "גוף",
+        "emoji": "🧍",
+        "words": [
+          { "en": "HAND", "he": "יד" },
+          { "en": "HEAD", "he": "ראש" },
+          { "en": "EYE", "he": "עין" },
+          { "en": "FOOT", "he": "רגל" },
+          { "en": "NOSE", "he": "אף" },
+          { "en": "EAR", "he": "אוזן" },
+          { "en": "MOUTH", "he": "פה" },
+          { "en": "HAIR", "he": "שיער" }
+        ]
+      },
+      "sports": {
+        "en": "Sports",
+        "he": "ספורט",
+        "emoji": "⚽",
+        "words": [
+          { "en": "SOCCER", "he": "כדורגל" },
+          { "en": "TENNIS", "he": "טניס" },
+          { "en": "SWIM", "he": "שחייה" },
+          { "en": "RUN", "he": "ריצה" },
+          { "en": "JUMP", "he": "קפיצה" },
+          { "en": "BIKE", "he": "אופניים" },
+          { "en": "BALL", "he": "כדור" },
+          { "en": "GOAL", "he": "שער" }
+        ]
+      }
+    }
+  },
+  "junior_high_high": {
+    "label": "כיתות ז'-י\"ב",
+    "categories": {
+      "feelings": {
+        "en": "Feelings",
+        "he": "רגשות",
+        "emoji": "😊",
+        "words": [
+          { "en": "HAPPY", "he": "שמח" },
+          { "en": "SAD", "he": "עצוב" },
+          { "en": "ANGRY", "he": "כועס" },
+          { "en": "PROUD", "he": "גאה" },
+          { "en": "BRAVE", "he": "אמיץ" },
+          { "en": "CALM", "he": "רגוע" },
+          { "en": "EXCITED", "he": "נרגש" },
+          { "en": "SHY", "he": "ביישן" }
+        ]
+      },
+      "technology": {
+        "en": "Technology",
+        "he": "טכנולוגיה",
+        "emoji": "💻",
+        "words": [
+          { "en": "COMPUTER", "he": "מחשב" },
+          { "en": "SCREEN", "he": "מסך" },
+          { "en": "KEYBOARD", "he": "מקלדת" },
+          { "en": "INTERNET", "he": "אינטרנט" },
+          { "en": "BATTERY", "he": "סוללה" },
+          { "en": "NETWORK", "he": "רשת" },
+          { "en": "FILE", "he": "קובץ" },
+          { "en": "PASSWORD", "he": "סיסמה" }
+        ]
+      },
+      "nature": {
+        "en": "Nature",
+        "he": "טבע",
+        "emoji": "🌿",
+        "words": [
+          { "en": "RIVER", "he": "נהר" },
+          { "en": "MOUNTAIN", "he": "הר" },
+          { "en": "FOREST", "he": "יער" },
+          { "en": "OCEAN", "he": "אוקיינוס" },
+          { "en": "DESERT", "he": "מדבר" },
+          { "en": "ISLAND", "he": "אי" },
+          { "en": "VALLEY", "he": "עמק" },
+          { "en": "STORM", "he": "סערה" }
+        ]
+      }
+    }
+  }
+}

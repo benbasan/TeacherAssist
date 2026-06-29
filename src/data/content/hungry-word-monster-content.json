@@ -1,0 +1,255 @@
+{
+  "lower_elementary": {
+    "label": "כיתות א'-ג'",
+    "focusSets": [
+      {
+        "emoji": "🐝",
+        "label": "מילים שמתחילות ב-ב",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שמתחילות ב-ב! 🤤",
+            "words": [
+              { "text": "בלון", "correct": true }, { "text": "בית", "correct": true }, { "text": "בננה", "correct": true },
+              { "text": "שמש", "correct": false }, { "text": "ילד", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד ב-ב-ב! כל כך טעים!",
+            "words": [
+              { "text": "בשר", "correct": true }, { "text": "בריכה", "correct": true }, { "text": "בגד", "correct": true },
+              { "text": "ספר", "correct": false }, { "text": "כיתה", "correct": false }
+            ]
+          },
+          {
+            "cry": "ב-ב-ב, יאמי-יאמי-יאמי!",
+            "words": [
+              { "text": "בוקר", "correct": true }, { "text": "ברז", "correct": true }, { "text": "בצל", "correct": true },
+              { "text": "שעון", "correct": false }, { "text": "עץ", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "🌊",
+        "label": "מילים שמתחילות ב-מ",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שמתחילות ב-מ! 🤤",
+            "words": [
+              { "text": "מים", "correct": true }, { "text": "מפתח", "correct": true }, { "text": "מנגו", "correct": true },
+              { "text": "ספר", "correct": false }, { "text": "כלב", "correct": false }
+            ]
+          },
+          {
+            "cry": "מ-מ-מ-מ! הרגשתי את זה!",
+            "words": [
+              { "text": "מורה", "correct": true }, { "text": "מחברת", "correct": true }, { "text": "מנורה", "correct": true },
+              { "text": "ילדה", "correct": false }, { "text": "שולחן", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד מ! הבטן שלי שמחה!",
+            "words": [
+              { "text": "משחק", "correct": true }, { "text": "מחשב", "correct": true }, { "text": "מכנסיים", "correct": true },
+              { "text": "עיפרון", "correct": false }, { "text": "חתול", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "☀️",
+        "label": "מילים שמתחילות ב-ש",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שמתחילות ב-ש! 🤤",
+            "words": [
+              { "text": "שולחן", "correct": true }, { "text": "שמש", "correct": true }, { "text": "שיר", "correct": true },
+              { "text": "מים", "correct": false }, { "text": "ילד", "correct": false }
+            ]
+          },
+          {
+            "cry": "ש-ש-ש! טעים כמו שוקולד!",
+            "words": [
+              { "text": "שנה", "correct": true }, { "text": "שחקן", "correct": true }, { "text": "שקית", "correct": true },
+              { "text": "בית", "correct": false }, { "text": "כדור", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד ש! אני ממש שמחה!",
+            "words": [
+              { "text": "שעון", "correct": true }, { "text": "שרוך", "correct": true }, { "text": "שוקולד", "correct": true },
+              { "text": "ספר", "correct": false }, { "text": "כיסא", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "🎀",
+        "label": "מילים שנגמרות ב-ה",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שנגמרות ב-ה! 🤤",
+            "words": [
+              { "text": "ילדה", "correct": true }, { "text": "כיתה", "correct": true }, { "text": "מורה", "correct": true },
+              { "text": "שולחן", "correct": false }, { "text": "ספר", "correct": false }
+            ]
+          },
+          {
+            "cry": "ה-ה-ה! ממממ, נפלא!",
+            "words": [
+              { "text": "שירה", "correct": true }, { "text": "עוגה", "correct": true }, { "text": "שנה", "correct": true },
+              { "text": "מחברת", "correct": false }, { "text": "כיסא", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד ה! הבטן שלי מפוצצת מאהבה!",
+            "words": [
+              { "text": "ברכה", "correct": true }, { "text": "שמחה", "correct": true }, { "text": "מנורה", "correct": true },
+              { "text": "ילד", "correct": false }, { "text": "חלב", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "🦁",
+        "label": "מילים שמתחילות ב-א",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שמתחילות ב-א! 🤤",
+            "words": [
+              { "text": "אריה", "correct": true }, { "text": "אבא", "correct": true }, { "text": "אוזן", "correct": true },
+              { "text": "דג", "correct": false }, { "text": "שולחן", "correct": false }
+            ]
+          },
+          {
+            "cry": "א-א-א! איזה כיף!",
+            "words": [
+              { "text": "אווז", "correct": true }, { "text": "אופניים", "correct": true }, { "text": "אמבטיה", "correct": true },
+              { "text": "כלב", "correct": false }, { "text": "ספר", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד א! אני אוהבת את זה!",
+            "words": [
+              { "text": "אגוז", "correct": true }, { "text": "אצבע", "correct": true }, { "text": "ארנב", "correct": true },
+              { "text": "מים", "correct": false }, { "text": "עץ", "correct": false }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "upper_elementary": {
+    "label": "כיתות ד'-ו'",
+    "focusSets": [
+      {
+        "emoji": "🐾",
+        "label": "רק שמות של בעלי חיים",
+        "rounds": [
+          {
+            "cry": "תנו לי רק בעלי חיים! 🤤",
+            "words": [
+              { "text": "נמר", "correct": true }, { "text": "צבי", "correct": true }, { "text": "תוכי", "correct": true },
+              { "text": "מזלג", "correct": false }, { "text": "כורסה", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד חיות! הבטן שלי נוהמת!",
+            "words": [
+              { "text": "דולפין", "correct": true }, { "text": "נחש", "correct": true }, { "text": "עכביש", "correct": true },
+              { "text": "מטרייה", "correct": false }, { "text": "גיטרה", "correct": false }
+            ]
+          },
+          {
+            "cry": "חיות זה הכי טעים בעולם!",
+            "words": [
+              { "text": "צפרדע", "correct": true }, { "text": "קיפוד", "correct": true }, { "text": "ינשוף", "correct": true },
+              { "text": "שעון", "correct": false }, { "text": "כרית", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "🍎",
+        "label": "רק מאכלים",
+        "rounds": [
+          {
+            "cry": "אני רוצה רק אוכל אמיתי! 🤤",
+            "words": [
+              { "text": "פסטה", "correct": true }, { "text": "אבטיח", "correct": true }, { "text": "גבינה", "correct": true },
+              { "text": "מחשב", "correct": false }, { "text": "כיסא", "correct": false }
+            ]
+          },
+          {
+            "cry": "מממ, עוד אוכל בבקשה!",
+            "words": [
+              { "text": "שניצל", "correct": true }, { "text": "חביתה", "correct": true }, { "text": "תות", "correct": true },
+              { "text": "עיפרון", "correct": false }, { "text": "מגבת", "correct": false }
+            ]
+          },
+          {
+            "cry": "ארוחה אחרונה לפני שאני שבעה!",
+            "words": [
+              { "text": "פלאפל", "correct": true }, { "text": "מרק", "correct": true }, { "text": "עוגייה", "correct": true },
+              { "text": "נעל", "correct": false }, { "text": "ספר", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "🔚",
+        "label": "מילים שנגמרות באות סופית (ם/ן/ץ/ף/ך)",
+        "rounds": [
+          {
+            "cry": "תנו לי מילים שמסתיימות באות סופית! 🤤",
+            "words": [
+              { "text": "ילדים", "correct": true }, { "text": "ארון", "correct": true }, { "text": "עץ", "correct": true },
+              { "text": "מורה", "correct": false }, { "text": "דלת", "correct": false }
+            ]
+          },
+          {
+            "cry": "אות סופית זה הקינוח האהוב עליי!",
+            "words": [
+              { "text": "מים", "correct": true }, { "text": "גן", "correct": true }, { "text": "קוף", "correct": true },
+              { "text": "כלב", "correct": false }, { "text": "שמש", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד אות סופית, אני מתמוגגת!",
+            "words": [
+              { "text": "ספרים", "correct": true }, { "text": "זמן", "correct": true }, { "text": "ענף", "correct": true },
+              { "text": "כלב", "correct": false }, { "text": "ספר", "correct": false }
+            ]
+          }
+        ]
+      },
+      {
+        "emoji": "✍️",
+        "label": "מילים שיש בהן האות צ",
+        "rounds": [
+          {
+            "cry": "אני אוהבת מילים עם האות צ! 🤤",
+            "words": [
+              { "text": "ציפור", "correct": true }, { "text": "עץ", "correct": true }, { "text": "ביצה", "correct": true },
+              { "text": "שולחן", "correct": false }, { "text": "ילד", "correct": false }
+            ]
+          },
+          {
+            "cry": "צ-צ-צ! איזה צליל טעים!",
+            "words": [
+              { "text": "רץ", "correct": true }, { "text": "מצנח", "correct": true }, { "text": "קיץ", "correct": true },
+              { "text": "מים", "correct": false }, { "text": "ספר", "correct": false }
+            ]
+          },
+          {
+            "cry": "עוד צ! הבטן שלי מצייצת מאושר!",
+            "words": [
+              { "text": "צלחת", "correct": true }, { "text": "מיץ", "correct": true }, { "text": "נוצה", "correct": true },
+              { "text": "כלב", "correct": false }, { "text": "דלת", "correct": false }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -13,6 +13,8 @@ import {
   CardContent,
   LinearProgress,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -24,9 +26,11 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/would-you-rather-content.json';
 
 // ---------------------------------------------------------------------------
-// Dilemma data
+// Dilemma data — pools live in external JSON (see CLAUDE.md → Game Content &
+// Architecture Rules), keyed by age cohort then by pack.
 // ---------------------------------------------------------------------------
 
 interface Dilemma {
@@ -34,54 +38,26 @@ interface Dilemma {
   b: string;
 }
 
-const PACKS: Record<string, { label: string; icon: string; dilemmas: Dilemma[] }> = {
-  humor: {
-    label: 'הומור ושטויות',
-    icon: '😂',
-    dilemmas: [
-      { a: 'לרקוד בלי מוזיקה בפני כל הכיתה', b: 'לשיר ג\'ינגל פרסומת בקול רם בפני כולם' },
-      { a: 'שיש לך שיניים שמאירות בחושך', b: 'שאוזניך מסתובבות ב-360 מעלות' },
-      { a: 'לחיות בלי יכולת לשקר', b: 'לחיות בלי יכולת לומר "לא" לאף אחד' },
-      { a: 'לנחור בקול רם בכיתה כשאתה ישן', b: 'לאמר בקול כל מה שאתה חושב בלי לסנן' },
-      { a: 'שיהיה לך זנב כמו כלב', b: 'שיהיה לך אוזניים כמו ארנב' },
-    ],
-  },
-  food: {
-    label: 'אוכל ומאכלים',
-    icon: '🍕',
-    dilemmas: [
-      { a: 'לאכול פיצה לכל ארוחה לשבוע שלם', b: 'לא לאכול ממתקים לחודש שלם' },
-      { a: 'שהמאכל האהוב עליך יהיה ירוק וגרגרי', b: 'שכל שתייה שתשתה תהיה מוגזת' },
-      { a: 'לוותר על גלידה לתמיד', b: 'לוותר על שוקולד לתמיד' },
-      { a: 'לאכול ארוחת בוקר ענקית ולדלג על ארוחת ערב', b: 'לאכול ארוחת ערב ענקית ולדלג על ארוחת בוקר' },
-      { a: 'שהמאכל האהוב עליך ייגמר מהעולם', b: 'שתצטרך לאכול ירק שאתה שונא כל יום' },
-    ],
-  },
-  superpower: {
-    label: 'על-טבעי ודמיון',
-    icon: '🦸',
-    dilemmas: [
-      { a: 'להיות מסוגל לעוף', b: 'להיות בלתי נראה' },
-      { a: 'לדעת את כל השפות בעולם', b: 'לנגן על כל כלי נגינה שקיים' },
-      { a: 'לנסוע בזמן לעבר', b: 'לנסוע בזמן לעתיד' },
-      { a: 'לדעת את כל תשובות המבחן מראש', b: 'לדעת מה כל אחד חושב עליך' },
-      { a: 'לשנות את גופך לכל בעל חיים', b: 'לשכפל את עצמך' },
-    ],
-  },
-  life: {
-    label: 'דילמות חיים',
-    icon: '🤔',
-    dilemmas: [
-      { a: 'לוותר על אינטרנט לשבוע', b: 'לוותר על ממתקים לחודש' },
-      { a: 'להיות המשכיל ביותר בכיתה אך בלי חברים', b: 'להיות פופולרי אך עם ציונים נמוכים' },
-      { a: 'לחיות 100 שנה חיים רגילים', b: 'לחיות 60 שנה חיים מלאי הרפתקאות' },
-      { a: 'לדעת את כל התשובות אך לא לדעת את השאלות', b: 'לדעת את כל השאלות אך לא לדעת את התשובות' },
-      { a: 'להיות מפורסם אך פרטיות אפסית', b: 'לחיות בסוד אך בחופש מוחלט' },
-    ],
-  },
-};
+interface PackData {
+  label: string;
+  icon: string;
+  dilemmas: Dilemma[];
+}
 
-const PACK_KEYS = Object.keys(PACKS);
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortPacks {
+  label: string;
+  packs: Record<string, PackData>;
+}
+
+const CONTENT = contentData as unknown as Record<AgeGroupKey, CohortPacks>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
+];
 
 function celebrate(): void {
   confetti({
@@ -122,6 +98,7 @@ export default function WouldYouRather({ gameId }: { gameId?: string }) {
   );
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('upper_elementary');
   const [players, setPlayers] = useState<string[]>([]);
   const [packKey, setPackKey] = useState<string>('superpower');
   const [dilemmas, setDilemmas] = useState<Dilemma[]>([]);
@@ -135,7 +112,7 @@ export default function WouldYouRather({ gameId }: { gameId?: string }) {
   const start = (names: string[], key: string) => {
     setPlayers(names);
     setPackKey(key);
-    const shuffled = [...PACKS[key].dilemmas].sort(() => Math.random() - 0.5);
+    const shuffled = [...CONTENT[ageGroup].packs[key].dilemmas].sort(() => Math.random() - 0.5);
     setDilemmas(shuffled);
     setDilemmaIdx(0);
     setCountA(0);
@@ -174,6 +151,9 @@ export default function WouldYouRather({ gameId }: { gameId?: string }) {
         <SetupScreen
           activeClassName={activeClassroom?.name ?? null}
           presentRoster={presentRoster}
+          packs={CONTENT[ageGroup].packs}
+          ageGroup={ageGroup}
+          onAgeGroupChange={setAgeGroup}
           onStart={start}
         />
       );
@@ -204,7 +184,7 @@ export default function WouldYouRather({ gameId }: { gameId?: string }) {
     case 'summary':
       return (
         <SummaryScreen
-          packKey={packKey}
+          pack={CONTENT[ageGroup].packs[packKey]}
           results={results}
           onReplay={() => setStage('setup')}
         />
@@ -219,10 +199,16 @@ export default function WouldYouRather({ gameId }: { gameId?: string }) {
 function SetupScreen({
   activeClassName,
   presentRoster,
+  packs,
+  ageGroup,
+  onAgeGroupChange,
   onStart,
 }: {
   activeClassName: string | null;
   presentRoster: string[];
+  packs: Record<string, PackData>;
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onStart: (names: string[], packKey: string) => void;
 }) {
   const hasClass = activeClassName !== null;
@@ -230,7 +216,10 @@ function SetupScreen({
   const [guests, setGuests] = useState<string[]>([]);
   const [guestDraft, setGuestDraft] = useState('');
   const [raw, setRaw] = useState('');
-  const [packKey, setPackKey] = useState('superpower');
+  const packKeys = Object.keys(packs);
+  const [packKey, setPackKey] = useState(packKeys[0]);
+  // Keep the selected pack valid when the cohort (and thus its packs) changes.
+  const activePackKey = packKeys.includes(packKey) ? packKey : packKeys[0];
 
   const addGuest = () => {
     const name = guestDraft.trim();
@@ -346,6 +335,26 @@ function SetupScreen({
             />
           )}
 
+          {/* AGE COHORT */}
+          <Stack spacing={1.25} sx={{ width: '100%', alignItems: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מתאימות הדילמות?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
+
           {/* PACK SELECTION */}
           <Box sx={{ width: '100%' }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
@@ -359,9 +368,9 @@ function SetupScreen({
                 width: '100%',
               }}
             >
-              {PACK_KEYS.map((key) => {
-                const pack = PACKS[key];
-                const selected = packKey === key;
+              {packKeys.map((key) => {
+                const pack = packs[key];
+                const selected = activePackKey === key;
                 return (
                   <Card
                     key={key}
@@ -394,10 +403,10 @@ function SetupScreen({
             color="primary"
             size="large"
             fullWidth
-            onClick={() => onStart(players, packKey)}
+            onClick={() => onStart(players, activePackKey)}
             sx={{ fontWeight: 800, fontSize: 20, py: 1.5 }}
           >
-            מתחילים! {PACKS[packKey].icon}
+            מתחילים! {packs[activePackKey].icon}
           </Button>
         </Stack>
       </Paper>
@@ -651,15 +660,14 @@ const CLASS_PROFILES: { minPctA: number; label: string }[] = [
 ];
 
 function SummaryScreen({
-  packKey,
+  pack,
   results,
   onReplay,
 }: {
-  packKey: string;
+  pack: PackData;
   results: VoteResult[];
   onReplay: () => void;
 }) {
-  const pack = PACKS[packKey];
   const totalA = results.reduce((s, r) => s + r.countA, 0);
   const totalB = results.reduce((s, r) => s + r.countB, 0);
   const grandTotal = totalA + totalB || 1;

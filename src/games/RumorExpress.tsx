@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClassrooms } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/social-rumor-express-content.json';
 import {
   Box,
   Paper,
@@ -103,7 +104,10 @@ function highlightFacts(text: string, facts: string[]): ReactNode[] {
 // Content model
 // ---------------------------------------------------------------------------
 
-type TierKey = 'elementary' | 'pre_teen' | 'junior_high';
+// Story tiers + reflection cards live in external JSON (see CLAUDE.md → Game
+// Content & Architecture Rules), keyed by the three age cohorts. Each fact MUST
+// be a verbatim substring of its story `text` (see highlightFacts).
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
 
 interface Story {
   text: string;
@@ -111,113 +115,33 @@ interface Story {
   facts: string[];
 }
 
-interface Tier {
-  key: TierKey;
+interface ReflectionCard {
+  emoji: string;
+  color: string;
+  body: string;
+}
+
+interface TierContent {
   label: string;
   blurb: string;
   emoji: string;
   color: string;
   stories: Story[];
+  reflectionCards: ReflectionCard[];
 }
 
-const TIERS: Record<TierKey, Tier> = {
-  elementary: {
-    key: 'elementary',
-    label: 'יסודי — מילים פשוטות וצבעים',
-    blurb: 'סיפורים קצרים עם פרטים מוחשיים: צבעים, מספרים וחפצים.',
-    emoji: '🧸',
-    color: '#26a69a',
-    stories: [
-      {
-        text: 'נועה הלכה לגינה ביום שלישי עם כלב חום. היא מצאה כדור ירוק מתחת לספסל ופגשה חבר שנתן לה ופל שוקולד.',
-        facts: ['נועה', 'יום שלישי', 'כלב חום', 'כדור ירוק', 'ופל שוקולד'],
-      },
-      {
-        text: 'סבתא הכינה עוגה עם 5 נרות ליום ההולדת. החתול הכחול קפץ על השולחן בשעה שש בדיוק ואכל את כל הקצפת.',
-        facts: ['עוגה', '5 נרות', 'החתול הכחול', 'שעה שש', 'הקצפת'],
-      },
-      {
-        text: 'דני רכב על אופניים אדומים אל הים ביום שני. הוא בנה ארמון חול עם 3 מגדלים ומצא צדף ורוד ענק.',
-        facts: ['דני', 'אופניים אדומים', 'יום שני', '3 מגדלים', 'צדף ורוד'],
-      },
-      {
-        text: 'מאיה קנתה בלון צהוב ושתי סוכריות בקיוסק. בדרך הביתה היא ראתה ציפור כחולה על העץ ונתנה לה פירור עוגייה.',
-        facts: ['מאיה', 'בלון צהוב', 'שתי סוכריות', 'ציפור כחולה', 'פירור עוגייה'],
-      },
-    ],
-  },
-  pre_teen: {
-    key: 'pre_teen',
-    label: "ד'-ו' — אירועים חברתיים ופרטים טכניים",
-    blurb: 'הזמנות, מפגשים ופרטים שקל לבלבל: שעות, סכומים ושמות.',
-    emoji: '🎒',
-    color: '#5c6bc0',
-    stories: [
-      {
-        text: 'יש מפגש כיתתי ביום שישי בגינה הציבורית ב-17:00. כל אחד מביא 10 שקלים לפיצה וחטיף אחד מלוח. מי שבא חייב להודיע לרוני עד מחר בצהריים.',
-        facts: ['יום שישי', '17:00', '10 שקלים', 'פיצה', 'חטיף אחד מלוח', 'להודיע לרוני'],
-      },
-      {
-        text: 'אומרים שעומר מצא בבית הספר ארנק עם 50 שקלים וכרטיס נסיעה. הוא מחכה ליד המזכירות כדי להחזיר אותו למורה שירה שלבשה מעיל צהוב.',
-        facts: ['עומר', '50 שקלים', 'כרטיס נסיעה', 'המזכירות', 'המורה שירה', 'מעיל צהוב'],
-      },
-      {
-        text: 'המורה לספורט הודיעה שהטיול לפארק יוצא ביום רביעי ב-08:30 מהשער האחורי. צריך להביא כובע, בקבוק מים גדול וכריך, והאוטובוס חוזר בדיוק ב-14:00.',
-        facts: ['ביום רביעי', '08:30', 'מהשער האחורי', 'כובע', 'בקבוק מים גדול', '14:00'],
-      },
-      {
-        text: 'בחנות החדשה ליד בית הספר יש מבצע: קונים שני ספרים ומקבלים מחברת בחינם. המבצע נגמר ביום חמישי, והחנות פתוחה רק עד 19:00 בערב.',
-        facts: ['שני ספרים', 'מחברת בחינם', 'ביום חמישי', '19:00'],
-      },
-    ],
-  },
-  junior_high: {
-    key: 'junior_high',
-    label: 'חטיבה ותיכון — שמועות מורכבות ודילמות',
-    blurb: 'מסרים ארוכים עם תנאים, שמות וזמנים — בדיוק כמו שמועה אמיתית.',
-    emoji: '📱',
-    color: '#ab47bc',
-    stories: [
-      {
-        text: 'השמועה אומרת שביטלו את המבחן במתמטיקה ביום ראשון כי המורה איתן חולה, אבל רכזת השכבה אמרה שצריך להגיע ב-08:00 לספרייה למרתון תרגול במקום זה, ומי שלא יבוא יקבל הערת משמעת בתיק האישי.',
-        facts: ['המבחן במתמטיקה', 'ביום ראשון', 'המורה איתן חולה', '08:00', 'לספרייה', 'הערת משמעת'],
-      },
-      {
-        text: 'מסתובב סיפור שמסיבת סוף השנה הועברה מאולם הספורט לגג בית הספר ביום חמישי ב-20:00, שכל אחד צריך לשלם 30 שקלים לדיג׳יי, ושהמנהלת אישרה זאת רק בתנאי שכולם יחתמו על טופס הסכמה מההורים.',
-        facts: ['מסיבת סוף השנה', 'לגג בית הספר', 'ביום חמישי', '20:00', '30 שקלים', 'טופס הסכמה'],
-      },
-      {
-        text: 'אומרים שנבחרת הכדורסל עלתה לגמר שמתקיים בעיר אחרת ביום שלישי, שהאוטובוס יוצא מהחניה ב-15:30, שצריך להביא חולצה כחולה אחידה, ושמי שמאחר יותר מעשר דקות מאבד את מקומו בנבחרת.',
-        facts: ['נבחרת הכדורסל', 'בעיר אחרת', 'ביום שלישי', '15:30', 'חולצה כחולה', 'עשר דקות'],
-      },
-      {
-        text: 'יש שמועה שהמורה לאנגלית מחליפה את הבוחן הכתוב במצגת בזוגות שצריך להגיש עד יום ראשון הבא, שכל זוג מקבל נושא אחר בהגרלה, ושהציון נספר כמו מבחן רגיל וגם מי שנעדר חייב להשלים תוך שבוע.',
-        facts: ['המורה לאנגלית', 'מצגת בזוגות', 'עד יום ראשון הבא', 'בהגרלה', 'כמו מבחן רגיל', 'תוך שבוע'],
-      },
-    ],
-  },
-};
+interface Tier extends TierContent {
+  key: AgeGroupKey;
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, TierContent>;
+
+const TIER_KEYS: AgeGroupKey[] = ['lower_elementary', 'upper_elementary', 'junior_high_high'];
+
+const TIERS: Tier[] = TIER_KEYS.map((key) => ({ key, ...CONTENT[key] }));
 
 const REPS = 3;
 const HANDOFF_SECONDS = 45;
-
-const REFLECTION_CARDS = [
-  {
-    emoji: '🔄',
-    color: INDIGO,
-    body: 'למה לדעתכם המידע השתנה בדרך? מי הוסיף פרטים ומי השמיט?',
-  },
-  {
-    emoji: '💔',
-    color: TEAL,
-    body: 'איך זה מרגיש להיות זה שמספרים עליו סיפור לא מדויק בווטסאפ?',
-  },
-  {
-    emoji: '📲',
-    color: '#7e57c2',
-    body: "מה האחריות שלנו לפני שאנחנו לוחצים על 'העבר' (Forward) להודעה שקיבלנו?",
-  },
-];
 
 type Stage = 'setup' | 'origin' | 'chain' | 'factcheck' | 'reflection';
 
@@ -319,7 +243,7 @@ export default function RumorExpress({ gameId }: { gameId?: string }) {
     );
   }
 
-  return <ReflectionScreen onFinish={finish} />;
+  return <ReflectionScreen cards={tier.reflectionCards} onFinish={finish} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,7 +257,7 @@ function SetupScreen({
   activeClassName: string | null;
   onStart: (tier: Tier) => void;
 }) {
-  const [selected, setSelected] = useState<TierKey | null>(null);
+  const [selected, setSelected] = useState<AgeGroupKey | null>(null);
 
   return (
     <Box>
@@ -377,9 +301,8 @@ function SetupScreen({
           mb: 4,
         }}
       >
-        {(Object.keys(TIERS) as TierKey[]).map((key) => {
-          const t = TIERS[key];
-          const isSel = selected === key;
+        {TIERS.map((t) => {
+          const isSel = selected === t.key;
           return (
             <Card
               key={t.key}
@@ -393,7 +316,7 @@ function SetupScreen({
               }}
             >
               <CardActionArea
-                onClick={() => setSelected(key)}
+                onClick={() => setSelected(t.key)}
                 sx={{ height: '100%', alignItems: 'stretch' }}
               >
                 <CardContent sx={{ textAlign: 'center', py: 3.5 }}>
@@ -416,7 +339,10 @@ function SetupScreen({
           variant="contained"
           size="large"
           disabled={!selected}
-          onClick={() => selected && onStart(TIERS[selected])}
+          onClick={() => {
+            const chosen = TIERS.find((t) => t.key === selected);
+            if (chosen) onStart(chosen);
+          }}
           sx={{ px: 5, py: 1.75, fontSize: 20, fontWeight: 800 }}
         >
           התחל משחק וחשוף את המקור
@@ -703,7 +629,7 @@ function FactCheckScreen({
 // Screen 5 — Pedagogical reflection
 // ---------------------------------------------------------------------------
 
-function ReflectionScreen({ onFinish }: { onFinish: () => void }) {
+function ReflectionScreen({ cards, onFinish }: { cards: ReflectionCard[]; onFinish: () => void }) {
   return (
     <Fade in timeout={700}>
       <Box sx={{ borderRadius: 4, p: { xs: 2, sm: 3 }, background: LAVENDER_BG }}>
@@ -720,7 +646,7 @@ function ReflectionScreen({ onFinish }: { onFinish: () => void }) {
         </Stack>
 
         <Stack spacing={2.5} sx={{ mb: 4 }}>
-          {REFLECTION_CARDS.map((c, i) => (
+          {cards.map((c, i) => (
             <Paper
               key={i}
               elevation={2}

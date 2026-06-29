@@ -1,0 +1,131 @@
+{
+  "lower_elementary": {
+    "label": "כיתות א'-ג'",
+    "topics": [
+      {
+        "key": "grammar",
+        "label": "זכר ונקבה ומספרים",
+        "blurb": "התאמת מין ומספר — האם המילים מסכימות זו עם זו?",
+        "icon": "spellcheck",
+        "color": "#5c6bc0",
+        "sentences": [
+          { "text": "על השולחן מונחים שלושה בננות צהובות.", "hasGlitch": true, "correction": "בננה היא נקבה — צריך לומר: שלוש בננות." },
+          { "text": "חמשת הילדים רצו לחצר לשחק בכדור.", "hasGlitch": false, "correction": "" },
+          { "text": "קניתי שתי כדורים אדומים בחנות.", "hasGlitch": true, "correction": "כדור הוא זכר — צריך לומר: שני כדורים." },
+          { "text": "הילדה הקטנה אכלה תפוח ירוק.", "hasGlitch": false, "correction": "" },
+          { "text": "בגינה גדלים ארבע עצים גבוהים.", "hasGlitch": true, "correction": "עץ הוא זכר — צריך לומר: ארבעה עצים." },
+          { "text": "שלוש חברות שיחקו יחד בחול.", "hasGlitch": false, "correction": "" }
+        ]
+      },
+      {
+        "key": "spelling",
+        "label": "בלשי כתיב — אותיות מבלבלות",
+        "blurb": "אותיות שנשמעות דומה — האם הכתיב נכון?",
+        "icon": "menu_book",
+        "color": "#26a69a",
+        "sentences": [
+          { "text": "בקיץ הולכים לים עם כובה רחב.", "hasGlitch": true, "correction": "כותבים 'כובע' עם ע' בסוף, לא 'כובה'." },
+          { "text": "הילדה ציירה פרך יפה על הדף.", "hasGlitch": true, "correction": "כותבים 'פרח' עם ח', לא 'פרך'." },
+          { "text": "אבא הכין ארוחת בוקר טעימה.", "hasGlitch": false, "correction": "" },
+          { "text": "שתיתי כוס חלאב קר מהמקרר.", "hasGlitch": true, "correction": "כותבים 'חלב', בלי האות א'." },
+          { "text": "הכלב רץ אחרי הכדור בגינה.", "hasGlitch": false, "correction": "" },
+          { "text": "קראתי ספר מעניין לפני השינה.", "hasGlitch": false, "correction": "" }
+        ]
+      }
+    ]
+  },
+  "upper_elementary": {
+    "label": "כיתות ד'-ו'",
+    "topics": [
+      {
+        "key": "grammar",
+        "label": "זכר ונקבה ומספרים",
+        "blurb": "התאמת מין ומספר — האם המילים מסכימות זו עם זו?",
+        "icon": "spellcheck",
+        "color": "#5c6bc0",
+        "sentences": [
+          { "text": "בכיתה יש עשרים ושתיים תלמידים חרוצים.", "hasGlitch": true, "correction": "'תלמידים' זכר — צריך 'עשרים ושניים תלמידים'." },
+          { "text": "שלוש המורות הגיעו לישיבה בזמן.", "hasGlitch": false, "correction": "" },
+          { "text": "על המדף עמדו שמונה ספרים עבים.", "hasGlitch": false, "correction": "" },
+          { "text": "אכלנו ארבע פלאפלים בהפסקה הגדולה.", "hasGlitch": true, "correction": "'פלאפל' זכר — צריך 'ארבעה פלאפלים'." },
+          { "text": "חמש בנות שרו יחד בחזרה למקהלה.", "hasGlitch": false, "correction": "" }
+        ]
+      },
+      {
+        "key": "spelling",
+        "label": "בלשי כתיב — אותיות מבלבלות",
+        "blurb": "אותיות שנשמעות דומה — האם הכתיב נכון?",
+        "icon": "menu_book",
+        "color": "#26a69a",
+        "sentences": [
+          { "text": "המורה ביקשה מכל תלמיד לקרות את העמוד הבא.", "hasGlitch": true, "correction": "קוראים בספר עם א': 'לקרוא'. 'לקרות' פירושו 'להתרחש'." },
+          { "text": "התלמיד הצליח לפטור את התרגיל הקשה במהירות.", "hasGlitch": true, "correction": "פותרים תרגיל ב'לפתור' (ת'); 'לפטור' פירושו לשחרר ממשהו." },
+          { "text": "הוא תיאר את הנוף בצורה יפה ומדויקת.", "hasGlitch": false, "correction": "" },
+          { "text": "כתבנו חיבור ארוך על החופש הגדול.", "hasGlitch": false, "correction": "" },
+          { "text": "הסתכלתי בשעון וגיליתי שאיחרתי לשיעור.", "hasGlitch": false, "correction": "" }
+        ]
+      },
+      {
+        "key": "idioms",
+        "label": "ניבים ופתגמים משובשים",
+        "blurb": "ביטויים מהשפה — האם הניב נאמר נכון?",
+        "icon": "auto_stories",
+        "color": "#ab47bc",
+        "sentences": [
+          { "text": "דני רצה להצליח במבחן, ולכן החליט להפוך כל אבן ואבן.", "hasGlitch": false, "correction": "" },
+          { "text": "רון לא ידע את התשובה, אז המציא משהו והכה בלוח פח.", "hasGlitch": true, "correction": "שיבוש ניב — להמצאת דברים אומרים 'בדה מליבו'." },
+          { "text": "הוא עבד קשה כל השנה וקצר את פירות עמלו.", "hasGlitch": false, "correction": "" },
+          { "text": "אחרי הוויכוח הם החליטו לקבור את גרזן המלחמה.", "hasGlitch": false, "correction": "" },
+          { "text": "הוא היה כל כך עייף שנפל עליו עולם ומלואו.", "hasGlitch": true, "correction": "שיבוש — אומרים 'נפלה עליו עייפות' או 'חשך עליו עולמו'." }
+        ]
+      }
+    ]
+  },
+  "junior_high_high": {
+    "label": "כיתות ז'-י\"ב",
+    "topics": [
+      {
+        "key": "grammar",
+        "label": "תחביר והתאמה דקדוקית",
+        "blurb": "התאמת נושא ונשוא ומבנה משפט — האם הכול מתואם?",
+        "icon": "spellcheck",
+        "color": "#5c6bc0",
+        "sentences": [
+          { "text": "התלמידים אשר השתתפו בטיול נהנו מאוד.", "hasGlitch": false, "correction": "" },
+          { "text": "אחד מהפתרונות שהוצעו לא היו מספקים.", "hasGlitch": true, "correction": "הנושא 'אחד' ביחיד — צריך 'לא היה מספק'." },
+          { "text": "הספר הזה, יחד עם המאמרים, תורם להבנת הנושא.", "hasGlitch": false, "correction": "" },
+          { "text": "כל אחד מהתלמידים הביאו את הציוד שלהם.", "hasGlitch": true, "correction": "'כל אחד' ביחיד — צריך 'הביא את הציוד שלו'." },
+          { "text": "התופעה הזו מעוררת שאלות רבות ומורכבות.", "hasGlitch": false, "correction": "" }
+        ]
+      },
+      {
+        "key": "spelling",
+        "label": "כתיב מדויק ומילים מבלבלות",
+        "blurb": "מילים שנשמעות דומה ומשמעות שונה — האם נבחרה הנכונה?",
+        "icon": "menu_book",
+        "color": "#26a69a",
+        "sentences": [
+          { "text": "הממשלה החליתה על רפורמה חדשה במשק.", "hasGlitch": true, "correction": "מקבלים החלטה: 'החליטה' (ט'); 'החליתה' פירושו גרמה למחלה." },
+          { "text": "בעקבות הגשם, הפעילות נדחת למחר בבוקר.", "hasGlitch": true, "correction": "הפעילות (נקבה) 'נדחתה' — עם ה' בסוף." },
+          { "text": "המדען ערך ניסוי מעמיק ומבוקר במעבדה.", "hasGlitch": false, "correction": "" },
+          { "text": "התלמיד הגיש עבודה מקיפה ומנומקת היטב.", "hasGlitch": false, "correction": "" },
+          { "text": "הם דנו בסוגיה המורכבת במשך שעה ארוכה.", "hasGlitch": false, "correction": "" }
+        ]
+      },
+      {
+        "key": "idioms",
+        "label": "ניבים ופתגמים בדיוק",
+        "blurb": "ביטויים עשירים — האם הניב מדויק ועקבי?",
+        "icon": "auto_stories",
+        "color": "#ab47bc",
+        "sentences": [
+          { "text": "הוא עבד מסביב לשעון והגיע להישגים מרשימים.", "hasGlitch": false, "correction": "" },
+          { "text": "במקום להתמודד, הם בחרו לטמון את הראש בחול.", "hasGlitch": false, "correction": "" },
+          { "text": "אחרי הכישלון הוא החליט להרים ידיים ולנסות שוב.", "hasGlitch": true, "correction": "סתירה פנימית — 'להרים ידיים' פירושו לוותר, לא להמשיך לנסות." },
+          { "text": "הסוד יצא לאור כשמישהו פתח את תיבת פנדורה.", "hasGlitch": false, "correction": "" },
+          { "text": "הוא הבטיח הרים וגבעות אך בנה מגדלים באוויר.", "hasGlitch": true, "correction": "הביטוי הנכון הוא 'מגדלים פורחים באוויר'." }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMarkGamePlayed } from '../context/ClassroomContext';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/focus-detectives-content.json';
 import {
   Box,
   Paper,
@@ -9,6 +10,8 @@ import {
   Stack,
   Chip,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import SelfImprovementRoundedIcon from '@mui/icons-material/SelfImprovementRounded';
@@ -26,6 +29,16 @@ function randInt(min: number, max: number): number {
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Fisher–Yates shuffle (returns a new array; never mutates the source). */
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 function celebrate(): void {
@@ -62,23 +75,25 @@ interface Round {
   pool: string[]; // alternates used for an "emoji change"
 }
 
-const ROUNDS: Round[] = [
-  {
-    theme: 'אימוג׳ים',
-    emojis: ['😀', '🐶', '🌟', '🍎', '🚀', '🎈', '🐱', '🌈', '⚽'],
-    pool: ['🦄', '🍕', '🐢', '🎸', '🦋', '🍩', '🐸', '🎁', '🌙'],
-  },
-  {
-    theme: 'צורות הנדסיות',
-    emojis: ['🔺', '🔵', '🟩', '🟥', '⬛', '🔶', '⭐', '🔷', '🟪'],
-    pool: ['🔻', '🟠', '🟦', '🟨', '⚪', '🟫', '✴️', '🔘', '🟢'],
-  },
-  {
-    theme: 'כלי בית ספר',
-    emojis: ['✏️', '📕', '📐', '✂️', '📌', '🖍️', '📎', '📒', '🖊️'],
-    pool: ['📏', '📗', '🧮', '🖌️', '📍', '🖇️', '📓', '🗒️', '🔖'],
-  },
+// Themed memory boards live in external JSON (see CLAUDE.md → Game Content &
+// Architecture Rules), keyed by age cohort. Each playthrough draws ROUNDS_PER_GAME
+// random boards from the selected cohort's pool.
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortRounds {
+  label: string;
+  rounds: Round[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortRounds>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
+
+const ROUNDS_PER_GAME = 3;
 
 interface RoundGrid {
   base: GridItem[];
@@ -87,8 +102,7 @@ interface RoundGrid {
 }
 
 /** Builds a round's grid and a single-cell alteration (emoji OR color). */
-function buildRound(roundIndex: number): RoundGrid {
-  const round = ROUNDS[roundIndex];
+function buildRound(round: Round): RoundGrid {
   const base: GridItem[] = round.emojis.map((emoji, i) => ({
     emoji,
     color: CARD_COLORS[i % CARD_COLORS.length],
@@ -119,11 +133,14 @@ type Phase = 'INTRO' | 'PLAYING' | 'SUMMARY';
 
 export default function FocusDetectivesGame({ gameId }: { gameId?: string }) {
   const [phase, setPhase] = useState<Phase>('INTRO');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [score, setScore] = useState(0);
+  const [total, setTotal] = useState(ROUNDS_PER_GAME);
   useMarkGamePlayed(gameId, phase === 'SUMMARY');
 
-  const finishGame = (finalScore: number) => {
+  const finishGame = (finalScore: number, playedRounds: number) => {
     setScore(finalScore);
+    setTotal(playedRounds);
     setPhase('SUMMARY');
   };
 
@@ -132,9 +149,16 @@ export default function FocusDetectivesGame({ gameId }: { gameId?: string }) {
     setPhase('INTRO');
   };
 
-  if (phase === 'INTRO') return <IntroScreen onStart={() => setPhase('PLAYING')} />;
-  if (phase === 'SUMMARY') return <SummaryScreen score={score} onRestart={restart} />;
-  return <PlayingScreen onFinish={finishGame} />;
+  if (phase === 'INTRO')
+    return (
+      <IntroScreen
+        ageGroup={ageGroup}
+        onAgeGroupChange={setAgeGroup}
+        onStart={() => setPhase('PLAYING')}
+      />
+    );
+  if (phase === 'SUMMARY') return <SummaryScreen score={score} total={total} onRestart={restart} />;
+  return <PlayingScreen rounds={CONTENT[ageGroup].rounds} onFinish={finishGame} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +167,15 @@ export default function FocusDetectivesGame({ gameId }: { gameId?: string }) {
 
 const SILENCE_SECONDS = 15;
 
-function IntroScreen({ onStart }: { onStart: () => void }) {
+function IntroScreen({
+  ageGroup,
+  onAgeGroupChange,
+  onStart,
+}: {
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
+  onStart: () => void;
+}) {
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -235,6 +267,25 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
             </Typography>
           </Stack>
 
+          <Stack spacing={1.25} sx={{ alignItems: 'center', width: '100%' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מתאימים הלוחות?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
+
           <Button
             onClick={beginCountdown}
             size="large"
@@ -260,10 +311,18 @@ type Step = 'MEMORIZE' | 'BLINK' | 'RECALL' | 'FEEDBACK';
 const MEMORIZE_MS = 5000;
 const BLINK_MS = 1000;
 
-function PlayingScreen({ onFinish }: { onFinish: (score: number) => void }) {
+function PlayingScreen({
+  rounds,
+  onFinish,
+}: {
+  rounds: Round[];
+  onFinish: (score: number, total: number) => void;
+}) {
+  // Draw a fresh random subset of boards from the cohort pool for this playthrough.
+  const [gameRounds] = useState<Round[]>(() => shuffle(rounds).slice(0, ROUNDS_PER_GAME));
   const [round, setRound] = useState(0);
   const [step, setStep] = useState<Step>('MEMORIZE');
-  const [grid, setGrid] = useState<RoundGrid>(() => buildRound(0));
+  const [grid, setGrid] = useState<RoundGrid>(() => buildRound(gameRounds[0]));
   const [clicked, setClicked] = useState<number | null>(null);
   const [progress, setProgress] = useState(100);
   const [score, setScore] = useState(0);
@@ -297,14 +356,14 @@ function PlayingScreen({ onFinish }: { onFinish: (score: number) => void }) {
   };
 
   const handleNext = () => {
-    if (round < ROUNDS.length - 1) {
+    if (round < gameRounds.length - 1) {
       const nextRound = round + 1;
       setRound(nextRound);
-      setGrid(buildRound(nextRound));
+      setGrid(buildRound(gameRounds[nextRound]));
       setClicked(null);
       setStep('MEMORIZE');
     } else {
-      onFinish(score);
+      onFinish(score, gameRounds.length);
     }
   };
 
@@ -320,7 +379,7 @@ function PlayingScreen({ onFinish }: { onFinish: (score: number) => void }) {
         sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}
       >
         <Chip
-          label={`סיבוב ${round + 1} מתוך ${ROUNDS.length} · ${ROUNDS[round].theme}`}
+          label={`סיבוב ${round + 1} מתוך ${gameRounds.length} · ${gameRounds[round].theme}`}
           color="primary"
         />
         <Chip label={`ניקוד: ${score}`} color="secondary" variant="outlined" />
@@ -429,7 +488,7 @@ function PlayingScreen({ onFinish }: { onFinish: (score: number) => void }) {
             onClick={handleNext}
             sx={{ py: 1.8, px: 5, fontSize: 20, fontWeight: 800 }}
           >
-            {round < ROUNDS.length - 1 ? 'לסיבוב הבא' : 'לסיכום 🎉'}
+            {round < gameRounds.length - 1 ? 'לסיבוב הבא' : 'לסיכום 🎉'}
           </Button>
         </Stack>
       )}
@@ -443,7 +502,15 @@ function PlayingScreen({ onFinish }: { onFinish: (score: number) => void }) {
 
 const BREATHING_SECONDS = 30;
 
-function SummaryScreen({ score, onRestart }: { score: number; onRestart: () => void }) {
+function SummaryScreen({
+  score,
+  total,
+  onRestart,
+}: {
+  score: number;
+  total: number;
+  onRestart: () => void;
+}) {
   const [inhale, setInhale] = useState(true);
   const [secondsLeft, setSecondsLeft] = useState(BREATHING_SECONDS);
 
@@ -464,9 +531,9 @@ function SummaryScreen({ score, onRestart }: { score: number; onRestart: () => v
   }, []);
 
   const message =
-    score === 3
+    score === total
       ? 'ריכוז מושלם! הכיתה הזו ערנית, רגועה וממוקדת לגמרי.'
-      : score === 2
+      : score >= total - 1
         ? 'ריכוז מצוין! עוד נשימה עמוקה — ואנחנו מוכנים לשיעור.'
         : 'כל הכבוד על המאמץ! העיקר שהתרכזנו והרגענו יחד.';
 
@@ -489,7 +556,7 @@ function SummaryScreen({ score, onRestart }: { score: number; onRestart: () => v
             המשימה הושלמה!
           </Typography>
           <Chip
-            label={`פיצחתם ${score} מתוך ${ROUNDS.length} סיבובים`}
+            label={`פיצחתם ${score} מתוך ${total} סיבובים`}
             color="success"
             sx={{ fontWeight: 700 }}
           />

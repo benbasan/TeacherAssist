@@ -1,0 +1,149 @@
+{
+  "lower_elementary": {
+    "label": "כיתות א'-ג'",
+    "letterPairs": [
+      {
+        "letters": ["א", "ע"],
+        "label": "א' מול ע'",
+        "emoji": "🐘",
+        "planks": [
+          { "template": "?רנב", "answer": 0, "full": "ארנב" },
+          { "template": "?נבים", "answer": 1, "full": "ענבים" },
+          { "template": "ש?ון", "answer": 1, "full": "שעון" },
+          { "template": "?כל", "answer": 0, "full": "אכל" },
+          { "template": "?ץ", "answer": 1, "full": "עץ" }
+        ]
+      },
+      {
+        "letters": ["ח", "כ"],
+        "label": "ח' מול כ'",
+        "emoji": "🐸",
+        "planks": [
+          { "template": "?לב", "answer": 0, "full": "חלב" },
+          { "template": "?פתור", "answer": 1, "full": "כפתור" },
+          { "template": "?תול", "answer": 0, "full": "חתול" },
+          { "template": "?וכב", "answer": 1, "full": "כוכב" },
+          { "template": "?גיגה", "answer": 0, "full": "חגיגה" }
+        ]
+      },
+      {
+        "letters": ["ט", "ת"],
+        "label": "ט' מול ת'",
+        "emoji": "🐯",
+        "planks": [
+          { "template": "?פוח", "answer": 1, "full": "תפוח" },
+          { "template": "מ?וס", "answer": 0, "full": "מטוס" },
+          { "template": "?יול", "answer": 0, "full": "טיול" },
+          { "template": "?בעת", "answer": 0, "full": "טבעת" },
+          { "template": "?שובה", "answer": 1, "full": "תשובה" }
+        ]
+      },
+      {
+        "letters": ["ס", "ש"],
+        "label": "ס' מול ש'",
+        "emoji": "🦔",
+        "planks": [
+          { "template": "?ולחן", "answer": 1, "full": "שולחן" },
+          { "template": "?פינה", "answer": 0, "full": "ספינה" },
+          { "template": "?ועל", "answer": 1, "full": "שועל" },
+          { "template": "?ליחה", "answer": 0, "full": "סליחה" },
+          { "template": "?מלה", "answer": 1, "full": "שמלה" }
+        ]
+      }
+    ]
+  },
+  "upper_elementary": {
+    "label": "כיתות ד'-ו'",
+    "letterPairs": [
+      {
+        "letters": ["א", "ע"],
+        "label": "א' מול ע'",
+        "emoji": "🦅",
+        "planks": [
+          { "template": "מצ?ד", "answer": 1, "full": "מצעד" },
+          { "template": "הפ?לה", "answer": 1, "full": "הפעלה" },
+          { "template": "?ניבה", "answer": 1, "full": "עניבה" },
+          { "template": "מ?רב", "answer": 1, "full": "מערב" },
+          { "template": "?רוחה", "answer": 0, "full": "ארוחה" }
+        ]
+      },
+      {
+        "letters": ["ח", "כ"],
+        "label": "ח' מול כ'",
+        "emoji": "🐪",
+        "planks": [
+          { "template": "מ?ברת", "answer": 0, "full": "מחברת" },
+          { "template": "?ביסה", "answer": 1, "full": "כביסה" },
+          { "template": "?ולצה", "answer": 0, "full": "חולצה" },
+          { "template": "?ורף", "answer": 0, "full": "חורף" },
+          { "template": "מל?ה", "answer": 1, "full": "מלכה" }
+        ]
+      },
+      {
+        "letters": ["ט", "ת"],
+        "label": "ט' מול ת'",
+        "emoji": "🐢",
+        "planks": [
+          { "template": "?מונה", "answer": 1, "full": "תמונה" },
+          { "template": "?ווס", "answer": 0, "full": "טווס" },
+          { "template": "מ?ריה", "answer": 0, "full": "מטריה" },
+          { "template": "?למיד", "answer": 1, "full": "תלמיד" },
+          { "template": "?פקיד", "answer": 1, "full": "תפקיד" }
+        ]
+      },
+      {
+        "letters": ["ק", "כ"],
+        "label": "ק' מול כ'",
+        "emoji": "🦘",
+        "planks": [
+          { "template": "?ביש", "answer": 1, "full": "כביש" },
+          { "template": "?ופסה", "answer": 0, "full": "קופסה" },
+          { "template": "?דור", "answer": 1, "full": "כדור" },
+          { "template": "?רטיס", "answer": 1, "full": "כרטיס" },
+          { "template": "?ינוח", "answer": 0, "full": "קינוח" }
+        ]
+      }
+    ]
+  },
+  "junior_high_high": {
+    "label": "כיתות ז'-י\"ב",
+    "letterPairs": [
+      {
+        "letters": ["א", "ע"],
+        "label": "א' מול ע'",
+        "emoji": "📜",
+        "planks": [
+          { "template": "ה?רכה", "answer": 1, "full": "הערכה" },
+          { "template": "?מדה", "answer": 1, "full": "עמדה" },
+          { "template": "מ?מץ", "answer": 0, "full": "מאמץ" },
+          { "template": "?חריות", "answer": 0, "full": "אחריות" },
+          { "template": "?רעור", "answer": 1, "full": "ערעור" }
+        ]
+      },
+      {
+        "letters": ["ט", "ת"],
+        "label": "ט' מול ת'",
+        "emoji": "⚖️",
+        "planks": [
+          { "template": "?כלית", "answer": 1, "full": "תכלית" },
+          { "template": "?בעוני", "answer": 0, "full": "טבעוני" },
+          { "template": "?פיסה", "answer": 1, "full": "תפיסה" },
+          { "template": "?עות", "answer": 0, "full": "טעות" },
+          { "template": "ש?ח", "answer": 0, "full": "שטח" }
+        ]
+      },
+      {
+        "letters": ["ק", "כ"],
+        "label": "ק' מול כ'",
+        "emoji": "🧮",
+        "planks": [
+          { "template": "?לכלה", "answer": 1, "full": "כלכלה" },
+          { "template": "?צב", "answer": 0, "full": "קצב" },
+          { "template": "?ישור", "answer": 1, "full": "כישור" },
+          { "template": "?ריטריון", "answer": 0, "full": "קריטריון" },
+          { "template": "?רקס", "answer": 0, "full": "קרקס" }
+        ]
+      }
+    ]
+  }
+}

@@ -20,15 +20,16 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EmojiPeopleRoundedIcon from '@mui/icons-material/EmojiPeopleRounded';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import contentData from '../data/content/social-reflection-walk-content.json';
 
 // ---------------------------------------------------------------------------
-// Content model
+// Content model — statement/debrief pools live in external JSON (see CLAUDE.md →
+// Game Content & Architecture Rules), keyed by age cohort.
 // ---------------------------------------------------------------------------
-
-type TopicKey = 'family' | 'learning' | 'social';
 
 interface ReflectionTopic {
-  key: TopicKey;
+  key: string;
   label: string;
   blurb: string;
   emoji: string;
@@ -39,83 +40,26 @@ interface ReflectionTopic {
   backward: string[];
 }
 
-// ---------------------------------------------------------------------------
-// Content (SEL — value statements for a Privilege-Walk style activity)
-//   `family` / `learning` are verbatim from the brief.
-//   `social` was authored here (no pool in the brief) — age-appropriate Hebrew
-//   matching the tone of the other two topics.
-// ---------------------------------------------------------------------------
+interface DebriefCard {
+  emoji: string;
+  title: string;
+  body: string;
+}
 
-const TOPICS: Record<TopicKey, ReflectionTopic> = {
-  family: {
-    key: 'family',
-    label: 'משפחה וכיבוד הורים',
-    blurb: 'על הקשר עם ההורים, האחים והבית.',
-    emoji: '👨‍👩‍👧‍👦',
-    color: '#5c6bc0',
-    forward: [
-      "אמרתי השבוע מרצוני 'תודה' להורים.",
-      'עזרתי לפנות את השולחן או לסדר את הבית בלי שביקשו ממני.',
-      'ויתרתי על משהו שרציתי בשביל אח או אחות.',
-    ],
-    backward: [
-      'השבוע צעקתי או דיברתי לא יפה בבית כי הייתי בעצבים.',
-      'הרגשתי לפעמים שההורים שלי לא מבינים אותי.',
-      'הבטחתי להורים שאעשה משהו ולא קיימתי.',
-    ],
-  },
-  learning: {
-    key: 'learning',
-    label: 'לימודים וצמיחה',
-    blurb: 'על מאמץ, התמדה והאומץ לנסות.',
-    emoji: '📚',
-    color: '#26a69a',
-    forward: [
-      'היה לי השבוע רגע שבו באמת התאמצתי ולא ויתרתי על תרגיל קשה.',
-      'עזרתי לחבר או חברה בכיתה להבין חומר לימודי.',
-      'השתתפתי בשיעור והרגשתי גאה בתשובה שעניתי.',
-    ],
-    backward: [
-      'הרגשתי השבוע תסכול או לחץ גדול בגלל לימודים או מבחן.',
-      'ויתרתי לעצמי והרמתי ידיים במשימה מסוימת.',
-      'פחדתי להצביע בשיעור כי חששתי שיצחקו עליי.',
-    ],
-  },
-  social: {
-    key: 'social',
-    label: 'חברים וחברה',
-    blurb: 'על חברות, השתייכות והדרך שבה אנחנו מתייחסים זה לזה.',
-    emoji: '🤝',
-    color: '#ab47bc',
-    forward: [
-      'עזרתי השבוע לחבר או חברה שהיו עצובים או הרגישו לבד.',
-      'צירפתי מישהו למשחק או לקבוצה כדי שלא יישאר בחוץ.',
-      "אמרתי 'סליחה' אחרי ריב, או סלחתי למישהו שפגע בי.",
-    ],
-    backward: [
-      'השבוע השארתי מישהו בחוץ או לא נתתי לו להצטרף אליי.',
-      'צחקתי על מישהו או דיברתי עליו מאחורי הגב.',
-      'הרגשתי השבוע בודד/ה או שלא היה לי עם מי לשחק.',
-    ],
-  },
-};
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
 
-const DEBRIEF_QUESTIONS = [
-  {
-    emoji: '👀',
-    title: 'מה הרגשנו?',
-    body: 'איך זה הרגיש לראות חברים זזים קדימה או אחורה? והאם הופתעתם ממשהו?',
-  },
-  {
-    emoji: '🔎',
-    title: 'מה גילינו?',
-    body: 'מה גילינו על הכיתה שלנו היום? איפה אנחנו דומים, ואיפה כל אחד מתמודד עם דברים אחרים?',
-  },
-  {
-    emoji: '🤝',
-    title: 'מה הלאה?',
-    body: 'איך נוכל להמשיך לתמוך אחד בשני, גם כשמישהו נמצא צעד אחורה?',
-  },
+interface CohortReflection {
+  label: string;
+  topics: ReflectionTopic[];
+  debrief: DebriefCard[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortReflection>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const EMERALD = '#10b981';
@@ -132,13 +76,12 @@ export default function StepByStepReflection({ gameId }: { gameId?: string }) {
   const navigate = useNavigate();
 
   const [stage, setStage] = useState<Stage>('setup');
-  const [topicKey, setTopicKey] = useState<TopicKey | null>(null);
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('upper_elementary');
+  const [topic, setTopic] = useState<ReflectionTopic | null>(null);
   const [index, setIndex] = useState(0);
 
-  const topic = topicKey ? TOPICS[topicKey] : null;
-
-  const selectTopic = (key: TopicKey) => {
-    setTopicKey(key);
+  const selectTopic = (t: ReflectionTopic) => {
+    setTopic(t);
     setIndex(0);
     setStage('forward');
   };
@@ -170,11 +113,19 @@ export default function StepByStepReflection({ gameId }: { gameId?: string }) {
   };
 
   if (stage === 'setup' || !topic) {
-    return <SetupScreen activeClassName={activeClassroom?.name ?? null} onSelect={selectTopic} />;
+    return (
+      <SetupScreen
+        activeClassName={activeClassroom?.name ?? null}
+        topics={CONTENT[ageGroup].topics}
+        ageGroup={ageGroup}
+        onAgeGroupChange={setAgeGroup}
+        onSelect={selectTopic}
+      />
+    );
   }
 
   if (stage === 'debrief') {
-    return <DebriefScreen onFinish={finish} />;
+    return <DebriefScreen cards={CONTENT[ageGroup].debrief} onFinish={finish} />;
   }
 
   const isForward = stage === 'forward';
@@ -203,10 +154,16 @@ export default function StepByStepReflection({ gameId }: { gameId?: string }) {
 
 function SetupScreen({
   activeClassName,
+  topics,
+  ageGroup,
+  onAgeGroupChange,
   onSelect,
 }: {
   activeClassName: string | null;
-  onSelect: (key: TopicKey) => void;
+  topics: ReflectionTopic[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
+  onSelect: (t: ReflectionTopic) => void;
 }) {
   return (
     <Box>
@@ -234,6 +191,25 @@ function SetupScreen({
         </Typography>
       </Stack>
 
+      <Stack spacing={1.25} sx={{ alignItems: 'center', mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימים ההיגדים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+          color="secondary"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Stack>
+
       <Box
         sx={{
           display: 'grid',
@@ -241,8 +217,7 @@ function SetupScreen({
           gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
         }}
       >
-        {(Object.keys(TOPICS) as TopicKey[]).map((key) => {
-          const t = TOPICS[key];
+        {topics.map((t) => {
           return (
             <Card
               key={t.key}
@@ -255,7 +230,7 @@ function SetupScreen({
               }}
             >
               <CardActionArea
-                onClick={() => onSelect(t.key)}
+                onClick={() => onSelect(t)}
                 sx={{ height: '100%', alignItems: 'stretch' }}
               >
                 <CardContent sx={{ textAlign: 'center', py: 4 }}>
@@ -411,7 +386,7 @@ function PhaseScreen({
 // Screen 4 — Debrief & reflection (calm; deliberately no confetti)
 // ---------------------------------------------------------------------------
 
-function DebriefScreen({ onFinish }: { onFinish: () => void }) {
+function DebriefScreen({ cards, onFinish }: { cards: DebriefCard[]; onFinish: () => void }) {
   return (
     <Fade in timeout={700}>
       <Box>
@@ -428,7 +403,7 @@ function DebriefScreen({ onFinish }: { onFinish: () => void }) {
         </Stack>
 
         <Stack spacing={2.5} sx={{ mb: 4 }}>
-          {DEBRIEF_QUESTIONS.map((q) => (
+          {cards.map((q) => (
             <Paper
               key={q.title}
               elevation={2}

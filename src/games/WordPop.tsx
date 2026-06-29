@@ -12,12 +12,15 @@ import {
   Stack,
   Chip,
   Alert,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import TimerRoundedIcon from '@mui/icons-material/TimerRounded';
 import StarRoundedIcon from '@mui/icons-material/StarRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
+import contentData from '../data/content/english-word-pop-content.json';
 
 // ---------------------------------------------------------------------------
 // Game constants & helpers
@@ -47,71 +50,38 @@ function celebrate(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Word dictionary (English → Hebrew), grouped by category
+// Word dictionary (English → Hebrew) — lives in external JSON (see CLAUDE.md →
+// Game Content & Architecture Rules), keyed by age cohort then by category.
 // ---------------------------------------------------------------------------
 
-type Category = 'animals' | 'food' | 'colors';
+type Category = string;
 
 interface Word {
   en: string;
   he: string;
 }
 
-const CATEGORIES: Record<Category, { en: string; he: string; emoji: string; words: Word[] }> = {
-  animals: {
-    en: 'Animals',
-    he: 'חיות',
-    emoji: '🐾',
-    words: [
-      { en: 'DOG', he: 'כלב' },
-      { en: 'CAT', he: 'חתול' },
-      { en: 'LION', he: 'אריה' },
-      { en: 'BEAR', he: 'דוב' },
-      { en: 'FISH', he: 'דג' },
-      { en: 'BIRD', he: 'ציפור' },
-      { en: 'HORSE', he: 'סוס' },
-      { en: 'COW', he: 'פרה' },
-      { en: 'FROG', he: 'צפרדע' },
-      { en: 'DUCK', he: 'ברווז' },
-    ],
-  },
-  food: {
-    en: 'Food',
-    he: 'אוכל',
-    emoji: '🍎',
-    words: [
-      { en: 'APPLE', he: 'תפוח' },
-      { en: 'BREAD', he: 'לחם' },
-      { en: 'MILK', he: 'חלב' },
-      { en: 'RICE', he: 'אורז' },
-      { en: 'EGG', he: 'ביצה' },
-      { en: 'CHEESE', he: 'גבינה' },
-      { en: 'CAKE', he: 'עוגה' },
-      { en: 'BANANA', he: 'בננה' },
-      { en: 'PIZZA', he: 'פיצה' },
-      { en: 'SOUP', he: 'מרק' },
-    ],
-  },
-  colors: {
-    en: 'Colors',
-    he: 'צבעים',
-    emoji: '🎨',
-    words: [
-      { en: 'RED', he: 'אדום' },
-      { en: 'BLUE', he: 'כחול' },
-      { en: 'GREEN', he: 'ירוק' },
-      { en: 'YELLOW', he: 'צהוב' },
-      { en: 'BLACK', he: 'שחור' },
-      { en: 'WHITE', he: 'לבן' },
-      { en: 'PINK', he: 'ורוד' },
-      { en: 'BROWN', he: 'חום' },
-      { en: 'PURPLE', he: 'סגול' },
-      { en: 'ORANGE', he: 'כתום' },
-    ],
-  },
-};
+interface CatData {
+  en: string;
+  he: string;
+  emoji: string;
+  words: Word[];
+}
 
-const CATEGORY_KEYS = Object.keys(CATEGORIES) as Category[];
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortCategories {
+  label: string;
+  categories: Record<Category, CatData>;
+}
+
+const CONTENT = contentData as unknown as Record<AgeGroupKey, CohortCategories>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
+];
 
 // ---------------------------------------------------------------------------
 // Bubble model
@@ -141,6 +111,7 @@ export default function WordPop({ gameId }: { gameId?: string }) {
   const { activeClassroomId } = useClassrooms();
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [category, setCategory] = useState<Category | null>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(START_LIVES);
@@ -192,13 +163,15 @@ export default function WordPop({ gameId }: { gameId?: string }) {
     if (stage !== 'playing' || !category) return;
 
     const spawnBubble = () => {
+      const cats = CONTENT[ageGroup].categories;
+      const keys = Object.keys(cats);
       const useCorrect = Math.random() < 0.5;
       let word: Word;
       if (useCorrect) {
-        word = pick(CATEGORIES[category].words);
+        word = pick(cats[category].words);
       } else {
-        const otherCat = pick(CATEGORY_KEYS.filter((c) => c !== category));
-        word = pick(CATEGORIES[otherCat].words);
+        const otherCat = pick(keys.filter((c) => c !== category));
+        word = pick(cats[otherCat].words);
       }
       writeBubbles((prev) => [
         ...prev,
@@ -255,7 +228,7 @@ export default function WordPop({ gameId }: { gameId?: string }) {
       clearInterval(countId);
       if (spawnTimeoutRef.current) clearTimeout(spawnTimeoutRef.current);
     };
-  }, [stage, category]);
+  }, [stage, category, ageGroup]);
 
   // End the game when time or lives run out.
   useEffect(() => {
@@ -295,15 +268,29 @@ export default function WordPop({ gameId }: { gameId?: string }) {
   // --- Render ---------------------------------------------------------------
 
   if (stage === 'setup') {
-    return <SetupScreen hasActiveClass={Boolean(activeClassroomId)} onPick={startGame} />;
+    return (
+      <SetupScreen
+        hasActiveClass={Boolean(activeClassroomId)}
+        categories={CONTENT[ageGroup].categories}
+        ageGroup={ageGroup}
+        onAgeGroupChange={setAgeGroup}
+        onPick={startGame}
+      />
+    );
   }
 
   if (stage === 'over') {
-    return <OverScreen score={score} category={category} onRestart={restart} />;
+    return (
+      <OverScreen
+        score={score}
+        category={category ? CONTENT[ageGroup].categories[category] : null}
+        onRestart={restart}
+      />
+    );
   }
 
   // stage === 'playing'
-  const targetName = category ? CATEGORIES[category].en : '';
+  const targetName = category ? CONTENT[ageGroup].categories[category].en : '';
   return (
     <Box>
       {/* Top bar */}
@@ -423,9 +410,15 @@ export default function WordPop({ gameId }: { gameId?: string }) {
 
 function SetupScreen({
   hasActiveClass,
+  categories,
+  ageGroup,
+  onAgeGroupChange,
   onPick,
 }: {
   hasActiveClass: boolean;
+  categories: Record<Category, CatData>;
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onPick: (cat: Category) => void;
 }) {
   return (
@@ -437,6 +430,25 @@ function SetupScreen({
         בועות עם מילים באנגלית יצופו על המסך — פוצצו רק את המילים ששייכות לקטגוריה שבחרתם,
         לפני שייגמרו הזמן או הלבבות!
       </Typography>
+
+      <Stack spacing={1.25} sx={{ alignItems: 'center' }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימות המילים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+          color="secondary"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Stack>
 
       {!hasActiveClass && (
         <Alert severity="info" sx={{ width: '100%' }}>
@@ -452,8 +464,8 @@ function SetupScreen({
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
         }}
       >
-        {CATEGORY_KEYS.map((key) => {
-          const cat = CATEGORIES[key];
+        {Object.keys(categories).map((key) => {
+          const cat = categories[key];
           return (
             <Card
               key={key}
@@ -492,7 +504,7 @@ function OverScreen({
   onRestart,
 }: {
   score: number;
-  category: Category | null;
+  category: CatData | null;
   onRestart: () => void;
 }) {
   const message =
@@ -531,9 +543,9 @@ function OverScreen({
             <Typography variant="body1" color="text.secondary">
               קטגוריה:{' '}
               <Box component="span" dir="ltr">
-                {CATEGORIES[category].en}
+                {category.en}
               </Box>{' '}
-              ({CATEGORIES[category].he})
+              ({category.he})
             </Typography>
           )}
           <Typography variant="h6" sx={{ fontWeight: 700 }}>

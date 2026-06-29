@@ -12,6 +12,8 @@ import {
   FormControlLabel,
   Radio,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -19,8 +21,36 @@ import TimerRoundedIcon from '@mui/icons-material/TimerRounded';
 import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRounded';
+import LightbulbRoundedIcon from '@mui/icons-material/LightbulbRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/two-truths-lie-content.json';
+
+// ---------------------------------------------------------------------------
+// Example "inspiration bank" — lives in external JSON (see CLAUDE.md → Game
+// Content & Architecture Rules), keyed by age cohort. The teacher enters their
+// own facts; these example sets seed the field placeholders + a "fill" button.
+// ---------------------------------------------------------------------------
+
+interface ExampleSet {
+  facts: [string, string, string];
+  lieIndex: 0 | 1 | 2;
+}
+
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortExamples {
+  label: string;
+  examples: ExampleSet[];
+}
+
+const CONTENT = contentData as unknown as Record<AgeGroupKey, CohortExamples>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
+];
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -112,12 +142,6 @@ export default function TwoTruthsLie({ gameId }: { gameId?: string }) {
 // Setup — HYBRID NAMES + fact entry
 // ---------------------------------------------------------------------------
 
-const PLACEHOLDER_FACTS: [string, string, string] = [
-  'בכיתה ד\' שברתי את היד כשנפלתי מאופניים.',
-  'יש לי אוסף של יותר מ-50 מחזיקי מפתחות.',
-  'פעם הופעתי בתוכנית טלוויזיה בערוץ הילדים.',
-];
-
 function SetupScreen({
   activeClassName,
   presentRoster,
@@ -135,6 +159,18 @@ function SetupScreen({
 
   const [facts, setFacts] = useState<[string, string, string]>(['', '', '']);
   const [lieIndex, setLieIndex] = useState<0 | 1 | 2>(2);
+
+  // Age-tiered inspiration bank: drives the field placeholders + a "fill" button.
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('upper_elementary');
+  const [exampleIdx, setExampleIdx] = useState(0);
+  const examples = CONTENT[ageGroup].examples;
+  const currentExample = examples[exampleIdx % examples.length];
+
+  const fillExample = () => {
+    setFacts([...currentExample.facts] as [string, string, string]);
+    setLieIndex(currentExample.lieIndex);
+    setExampleIdx((i) => (i + 1) % examples.length); // next click offers a fresh idea
+  };
 
   const addGuest = () => {
     const name = guestDraft.trim();
@@ -257,6 +293,41 @@ function SetupScreen({
             />
           )}
 
+          {/* AGE COHORT + INSPIRATION */}
+          <Stack spacing={1.25} sx={{ width: '100%', alignItems: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+              בנק רעיונות לפי שכבת גיל:
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => {
+                if (v) {
+                  setAgeGroup(v as AgeGroupKey);
+                  setExampleIdx(0);
+                }
+              }}
+              color="secondary"
+              size="small"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2, py: 0.75, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<LightbulbRoundedIcon />}
+              onClick={fillExample}
+              sx={{ fontWeight: 700, borderRadius: 16 }}
+            >
+              מלאו דוגמה להשראה 💡
+            </Button>
+          </Stack>
+
           {/* FACTS INPUT */}
           <Box sx={{ width: '100%', textAlign: 'right' }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
@@ -293,7 +364,7 @@ function SetupScreen({
                         <TextField
                           fullWidth
                           size="small"
-                          placeholder={`לדוגמה: ${PLACEHOLDER_FACTS[i]}`}
+                          placeholder={`לדוגמה: ${currentExample.facts[i]}`}
                           value={facts[i]}
                           onChange={(e) => setFact(i, e.target.value)}
                           multiline

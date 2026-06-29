@@ -16,24 +16,32 @@ import UndoRoundedIcon from '@mui/icons-material/UndoRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/sentence-detectives-content.json';
 
 // ── Content ────────────────────────────────────────────────────────────────
+// Sentence pools live in external JSON (see CLAUDE.md → Game Content & Architecture
+// Rules), keyed by age cohort (sentence-building is a beginning-grammar skill, so
+// only the two elementary cohorts apply). Each play draws ROUNDS_PER_GAME at random.
+// Last word carries a "." so students can identify it visually.
 
 type Sentence = { words: string[]; emoji: string };
 
-// Last word carries a "." so students can identify it visually
-const SENTENCES: Record<'easy' | 'hard', Sentence[]> = {
-  easy: [
-    { words: ['הכלב', 'רץ', 'מהר.'], emoji: '🐕' },
-    { words: ['ילדה', 'קוראת', 'ספר.'], emoji: '📚' },
-    { words: ['הגשם', 'ירד', 'בחוץ.'], emoji: '🌧️' },
-  ],
-  hard: [
-    { words: ['הכלב', 'הגדול', 'רץ', 'מהר', 'בחצר.'], emoji: '🐕' },
-    { words: ['שירה', 'אכלה', 'תפוח', 'אדום', 'ומתוק.'], emoji: '🍎' },
-    { words: ['החתול', 'האפור', 'ישן', 'על', 'הכיסא.'], emoji: '😺' },
-  ],
-};
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary';
+
+interface CohortSentences {
+  label: string;
+  desc: string;
+  sentences: Sentence[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortSentences>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string; desc: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label, desc: CONTENT.lower_elementary.desc },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label, desc: CONTENT.upper_elementary.desc },
+];
+
+const ROUNDS_PER_GAME = 3;
 
 const CHIP_PALETTE = [
   { bg: '#fce4ec', border: '#e91e63' },
@@ -47,7 +55,7 @@ const CHIP_PALETTE = [
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function shuffle(arr: string[]): string[] {
+function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -123,7 +131,8 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
   const [manualInput, setManualInput] = useState('');
 
   const [stage, setStage] = useState<Stage>('setup');
-  const [difficulty, setDifficulty] = useState<'easy' | 'hard'>('easy');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
+  const [gameSentences, setGameSentences] = useState<Sentence[]>([]);
   const [roundIndex, setRoundIndex] = useState(0);
   const [availableWords, setAvailableWords] = useState<string[]>([]);
   const [builtWords, setBuiltWords] = useState<string[]>([]);
@@ -135,12 +144,14 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
-  const sentence = SENTENCES[difficulty][roundIndex];
-  const isComplete = builtWords.length === sentence.words.length;
+  const sentence = gameSentences[roundIndex];
+  const isComplete = !!sentence && builtWords.length === sentence.words.length;
 
   function startGame() {
+    const drawn = shuffle(CONTENT[ageGroup].sentences).slice(0, ROUNDS_PER_GAME);
+    setGameSentences(drawn);
     setRoundIndex(0);
-    setAvailableWords(scramble(SENTENCES[difficulty][0].words));
+    setAvailableWords(scramble(drawn[0].words));
     setBuiltWords([]);
     setCheckState(null);
     setStage('playing');
@@ -161,14 +172,14 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
   }
 
   function handleSubmit() {
-    if (!isComplete || checkState !== null) return;
+    if (!sentence || !isComplete || checkState !== null) return;
     const correct = builtWords.join(' ') === sentence.words.join(' ');
     setCheckState(correct ? 'correct' : 'wrong');
 
     if (correct) {
       sfx.correct();
       const next = roundIndex + 1;
-      const total = SENTENCES[difficulty].length;
+      const total = gameSentences.length;
       if (next >= total) {
         sfx.victory();
         celebrate();
@@ -176,7 +187,7 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
       } else {
         setTimeout(() => {
           setRoundIndex(next);
-          setAvailableWords(scramble(SENTENCES[difficulty][next].words));
+          setAvailableWords(scramble(gameSentences[next].words));
           setBuiltWords([]);
           setCheckState(null);
         }, 1500);
@@ -193,6 +204,7 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
 
   function reset() {
     setStage('setup');
+    setGameSentences([]);
     setRoundIndex(0);
     setAvailableWords([]);
     setBuiltWords([]);
@@ -276,36 +288,34 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
         )}
 
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-          בחרו רמת קושי:
+          לאיזו שכבת גיל מתאימים המשפטים?
         </Typography>
         <Stack sx={{ gap: 1.5, mb: 4 }}>
-          {([['easy', '🟢', 'קל', '3–4 מילים במשפט'], ['hard', '🔴', 'מאתגר', '5–7 מילים במשפט']] as const).map(
-            ([key, dot, label, desc]) => (
-              <Paper
-                key={key}
-                onClick={() => setDifficulty(key)}
-                elevation={difficulty === key ? 3 : 1}
-                sx={{
-                  p: 2.5,
-                  cursor: 'pointer',
-                  borderRadius: 4,
-                  border: '2px solid',
-                  borderColor: difficulty === key ? 'primary.main' : 'transparent',
-                  bgcolor: difficulty === key ? '#eef0fb' : 'background.paper',
-                  transition: 'all 0.2s',
-                  '&:hover': { borderColor: 'primary.light' },
-                }}
-              >
-                <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="h5">{dot}</Typography>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700 }}>{label}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{desc}</Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-            )
-          )}
+          {AGE_GROUPS.map((g) => (
+            <Paper
+              key={g.key}
+              onClick={() => setAgeGroup(g.key)}
+              elevation={ageGroup === g.key ? 3 : 1}
+              sx={{
+                p: 2.5,
+                cursor: 'pointer',
+                borderRadius: 4,
+                border: '2px solid',
+                borderColor: ageGroup === g.key ? 'primary.main' : 'transparent',
+                bgcolor: ageGroup === g.key ? '#eef0fb' : 'background.paper',
+                transition: 'all 0.2s',
+                '&:hover': { borderColor: 'primary.light' },
+              }}
+            >
+              <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h5">🔍</Typography>
+                <Box>
+                  <Typography sx={{ fontWeight: 700 }}>{g.label}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{g.desc}</Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          ))}
         </Stack>
 
         <Button
@@ -339,7 +349,7 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
               תעודת בלש שפה מוסמך!
             </Typography>
             <Typography variant="body1" sx={{ mb: 2, color: '#92400e' }}>
-              פתרתם {SENTENCES[difficulty].length} משפטים מבולבלים בהצלחה מרשימה
+              פתרתם {gameSentences.length} משפטים מבולבלים בהצלחה מרשימה
             </Typography>
             {presentRoster.length > 0 && (
               <Typography sx={{ mb: 2, fontWeight: 600, color: '#78350f' }}>
@@ -362,12 +372,14 @@ export default function SentenceDetectives({ gameId }: { gameId?: string }) {
   }
 
   // ── Playing ────────────────────────────────────────────────────────────
+  if (!sentence) return null;
+
   return (
     <Box sx={{ maxWidth: 700, mx: 'auto', p: { xs: 2, sm: 3 } }}>
       {/* Round header */}
       <Stack sx={{ flexDirection: 'row', justifyContent: 'center', gap: 1.5, mb: 2 }}>
         <Chip
-          label={`משפט ${roundIndex + 1} מתוך ${SENTENCES[difficulty].length}`}
+          label={`משפט ${roundIndex + 1} מתוך ${gameSentences.length}`}
           variant="outlined"
           size="small"
         />

@@ -15,7 +15,10 @@ import {
   Alert,
   AlertTitle,
   Collapse,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
+import type { SvgIconComponent } from '@mui/icons-material';
 import SpellcheckRoundedIcon from '@mui/icons-material/SpellcheckRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import AutoStoriesRoundedIcon from '@mui/icons-material/AutoStoriesRounded';
@@ -24,6 +27,7 @@ import FrontHandRoundedIcon from '@mui/icons-material/FrontHandRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import contentData from '../data/content/spot-the-glitch-content.json';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -51,72 +55,39 @@ interface Sentence {
 }
 
 interface GlitchTopic {
-  key: 'grammar' | 'spelling' | 'idioms';
+  key: string;
   label: string;
   blurb: string;
-  icon: typeof SpellcheckRoundedIcon;
+  icon: string; // icon-name string resolved via ICON_MAP
   color: string;
   sentences: Sentence[];
 }
 
 // ---------------------------------------------------------------------------
-// Content (Hebrew language arts — grades א׳–ג׳)
+// Content — topic/sentence pools live in external JSON (see CLAUDE.md → Game
+// Content & Architecture Rules), keyed by age cohort.
 // ---------------------------------------------------------------------------
 
-const TOPICS: GlitchTopic[] = [
-  {
-    key: 'grammar',
-    label: 'זכר ונקבה ומספרים',
-    blurb: 'התאמת מין ומספר — האם המילים מסכימות זו עם זו?',
-    icon: SpellcheckRoundedIcon,
-    color: '#5c6bc0',
-    sentences: [
-      {
-        text: 'על השולחן שלי מונחים שלושה בננות צהובות וטעימות.',
-        hasGlitch: true,
-        correction: 'לא נכון! בננה היא נקבה, ולכן צריך לומר: שלוש בננות.',
-      },
-      {
-        text: 'חמשת הילדים רצו מהר לחצר כדי לשחק בכדור.',
-        hasGlitch: false,
-        correction: '',
-      },
-    ],
-  },
-  {
-    key: 'spelling',
-    label: 'בלשי כתיב — אותיות מבלבלות',
-    blurb: 'אותיות שנשמעות דומה — האם הכתיב נכון?',
-    icon: MenuBookRoundedIcon,
-    color: '#26a69a',
-    sentences: [
-      {
-        text: 'המורה ביקשה מכל תלמיד להוציא את הספר ולקרות את העמוד הבא.',
-        hasGlitch: true,
-        correction: "טעות כתיב! קוראים בספר באות א' (לקרוא), ולא באות ה' (לקרות).",
-      },
-    ],
-  },
-  {
-    key: 'idioms',
-    label: 'ניבים ופתגמים משובשים',
-    blurb: 'ביטויים מהשפה — האם הניב נאמר נכון?',
-    icon: AutoStoriesRoundedIcon,
-    color: '#ab47bc',
-    sentences: [
-      {
-        text: 'דני ממש רצה להצליח במבחן, ולכן הוא החליט להפוך כל אבן ואבן.',
-        hasGlitch: false,
-        correction: '',
-      },
-      {
-        text: 'רון לא ידע את התשובה, אז הוא פשוט המציא משהו והכה בלוח פח.',
-        hasGlitch: true,
-        correction:
-          "שיבוש של ניב! אומרים 'הכה גלים' או 'דיבר אל העצים ואל האבנים', הביטוי הנכון להמצאת דברים הוא 'הכה בסנורים' או 'בדה מליבו'.",
-      },
-    ],
-  },
+/** Maps a topic's icon-name string (from JSON) to its MUI icon component. */
+const ICON_MAP: Record<string, SvgIconComponent> = {
+  spellcheck: SpellcheckRoundedIcon,
+  menu_book: MenuBookRoundedIcon,
+  auto_stories: AutoStoriesRoundedIcon,
+};
+
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortTopics {
+  label: string;
+  topics: GlitchTopic[];
+}
+
+const CONTENT = contentData as unknown as Record<AgeGroupKey, CohortTopics>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 type Stage = 'topic' | 'board' | 'reveal' | 'summary';
@@ -130,6 +101,7 @@ type Verdict = 'correct-stop' | 'wrong-stop' | 'correct-ok';
 
 export default function SpotTheGlitch({ gameId }: { gameId?: string }) {
   const [stage, setStage] = useState<Stage>('topic');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [topic, setTopic] = useState<GlitchTopic | null>(null);
   useMarkGamePlayed(gameId, stage === 'summary');
   const [index, setIndex] = useState(0);
@@ -170,7 +142,14 @@ export default function SpotTheGlitch({ gameId }: { gameId?: string }) {
   };
 
   if (stage === 'topic' || !topic) {
-    return <TopicScreen onSelect={selectTopic} />;
+    return (
+      <TopicScreen
+        topics={CONTENT[ageGroup].topics}
+        ageGroup={ageGroup}
+        onAgeGroupChange={setAgeGroup}
+        onSelect={selectTopic}
+      />
+    );
   }
 
   if (stage === 'summary') {
@@ -214,7 +193,17 @@ export default function SpotTheGlitch({ gameId }: { gameId?: string }) {
 // Screen 1 — Topic selection
 // ---------------------------------------------------------------------------
 
-function TopicScreen({ onSelect }: { onSelect: (t: GlitchTopic) => void }) {
+function TopicScreen({
+  topics,
+  ageGroup,
+  onAgeGroupChange,
+  onSelect,
+}: {
+  topics: GlitchTopic[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
+  onSelect: (t: GlitchTopic) => void;
+}) {
   return (
     <Box>
       <Stack spacing={1} sx={{ mb: 3, textAlign: 'center', alignItems: 'center' }}>
@@ -229,6 +218,25 @@ function TopicScreen({ onSelect }: { onSelect: (t: GlitchTopic) => void }) {
         </Typography>
       </Stack>
 
+      <Stack spacing={1.25} sx={{ alignItems: 'center', mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימים המשפטים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+          color="secondary"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Stack>
+
       <Box
         sx={{
           display: 'grid',
@@ -236,8 +244,8 @@ function TopicScreen({ onSelect }: { onSelect: (t: GlitchTopic) => void }) {
           gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
         }}
       >
-        {TOPICS.map((t) => {
-          const Icon = t.icon;
+        {topics.map((t) => {
+          const Icon = ICON_MAP[t.icon] ?? SpellcheckRoundedIcon;
           return (
             <Card
               key={t.key}

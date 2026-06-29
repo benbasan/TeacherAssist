@@ -9,131 +9,40 @@ import {
   TextField,
   IconButton,
   Fade,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/hungry-word-monster-content.json';
 
 // ── Content ────────────────────────────────────────────────────────────────
+// Word pools live in external JSON (see CLAUDE.md → Game Content & Architecture
+// Rules), keyed by age cohort. This is a beginning-literacy mechanic, so only the
+// elementary cohorts apply — junior-high/high is intentionally omitted.
 
 type WordCard = { text: string; correct: boolean };
 type RoundData = { cry: string; words: WordCard[] };
 type FocusSet = { emoji: string; label: string; rounds: RoundData[] };
 
-const CORRECT_PER_ROUND = 3;
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary';
 
-const FOCUS_SETS: FocusSet[] = [
-  {
-    emoji: '🐝',
-    label: 'מילים שמתחילות ב-ב',
-    rounds: [
-      {
-        cry: 'תנו לי מילים שמתחילות ב-ב! 🤤',
-        words: [
-          { text: 'בלון', correct: true }, { text: 'בית', correct: true }, { text: 'בננה', correct: true },
-          { text: 'שמש', correct: false }, { text: 'ילד', correct: false },
-        ],
-      },
-      {
-        cry: 'עוד ב-ב-ב! כל כך טעים!',
-        words: [
-          { text: 'בשר', correct: true }, { text: 'בריכה', correct: true }, { text: 'בגד', correct: true },
-          { text: 'ספר', correct: false }, { text: 'כיתה', correct: false },
-        ],
-      },
-      {
-        cry: 'ב-ב-ב, יאמי-יאמי-יאמי!',
-        words: [
-          { text: 'בוקר', correct: true }, { text: 'ברז', correct: true }, { text: 'בצל', correct: true },
-          { text: 'שעון', correct: false }, { text: 'עץ', correct: false },
-        ],
-      },
-    ],
-  },
-  {
-    emoji: '🌊',
-    label: 'מילים שמתחילות ב-מ',
-    rounds: [
-      {
-        cry: 'תנו לי מילים שמתחילות ב-מ! 🤤',
-        words: [
-          { text: 'מים', correct: true }, { text: 'מפתח', correct: true }, { text: 'מנגו', correct: true },
-          { text: 'ספר', correct: false }, { text: 'כלב', correct: false },
-        ],
-      },
-      {
-        cry: 'מ-מ-מ-מ! הרגשתי את זה!',
-        words: [
-          { text: 'מורה', correct: true }, { text: 'מחברת', correct: true }, { text: 'מנורה', correct: true },
-          { text: 'ילדה', correct: false }, { text: 'שולחן', correct: false },
-        ],
-      },
-      {
-        cry: 'עוד מ! הבטן שלי שמחה!',
-        words: [
-          { text: 'משחק', correct: true }, { text: 'מחשב', correct: true }, { text: 'מכנסים', correct: true },
-          { text: 'עיפרון', correct: false }, { text: 'חתול', correct: false },
-        ],
-      },
-    ],
-  },
-  {
-    emoji: '☀️',
-    label: 'מילים שמתחילות ב-ש',
-    rounds: [
-      {
-        cry: 'תנו לי מילים שמתחילות ב-ש! 🤤',
-        words: [
-          { text: 'שולחן', correct: true }, { text: 'שמש', correct: true }, { text: 'שיר', correct: true },
-          { text: 'מים', correct: false }, { text: 'ילד', correct: false },
-        ],
-      },
-      {
-        cry: 'ש-ש-ש! טעים כמו שוקולד!',
-        words: [
-          { text: 'שנה', correct: true }, { text: 'שחקן', correct: true }, { text: 'שקית', correct: true },
-          { text: 'בית', correct: false }, { text: 'כדור', correct: false },
-        ],
-      },
-      {
-        cry: 'עוד ש! אני ממש שמחה!',
-        words: [
-          { text: 'שעון', correct: true }, { text: 'שרוך', correct: true }, { text: 'שוקולד', correct: true },
-          { text: 'ספר', correct: false }, { text: 'כיסא', correct: false },
-        ],
-      },
-    ],
-  },
-  {
-    emoji: '🎀',
-    label: 'מילים שנגמרות ב-ה',
-    rounds: [
-      {
-        cry: 'תנו לי מילים שנגמרות ב-ה! 🤤',
-        words: [
-          { text: 'ילדה', correct: true }, { text: 'כיתה', correct: true }, { text: 'מורה', correct: true },
-          { text: 'שולחן', correct: false }, { text: 'ספר', correct: false },
-        ],
-      },
-      {
-        cry: 'ה-ה-ה! ממממ, נפלא!',
-        words: [
-          { text: 'שירה', correct: true }, { text: 'אמה', correct: true }, { text: 'שנה', correct: true },
-          { text: 'מחברת', correct: false }, { text: 'כיסא', correct: false },
-        ],
-      },
-      {
-        cry: 'עוד ה! הבטן שלי מפוצצת מאהבה!',
-        words: [
-          { text: 'ברכה', correct: true }, { text: 'שמחה', correct: true }, { text: 'מנורה', correct: true },
-          { text: 'ילד', correct: false }, { text: 'חלב', correct: false },
-        ],
-      },
-    ],
-  },
+interface CohortFocus {
+  label: string;
+  focusSets: FocusSet[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortFocus>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
 ];
+
+const CORRECT_PER_ROUND = 3;
 
 const CARD_COLORS = ['#fce4ec', '#e8eaf6', '#e8f5e9', '#fff8e1', '#f3e5f5'];
 const CARD_BORDERS = ['#e91e63', '#3f51b5', '#4caf50', '#ff9800', '#9c27b0'];
@@ -201,6 +110,7 @@ export default function HungryWordMonster({ gameId }: { gameId?: string }) {
   const [manualInput, setManualInput] = useState('');
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [selectedFocus, setSelectedFocus] = useState(0);
   const [roundIndex, setRoundIndex] = useState(0);
   const [fedCorrect, setFedCorrect] = useState<Set<number>>(new Set());
@@ -214,7 +124,8 @@ export default function HungryWordMonster({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
-  const currentFocusSet = FOCUS_SETS[selectedFocus];
+  const focusSets = CONTENT[ageGroup].focusSets;
+  const currentFocusSet = focusSets[selectedFocus];
   const currentRound = currentFocusSet.rounds[roundIndex];
 
   // Round completion: fires when all correct words are fed
@@ -366,11 +277,34 @@ export default function HungryWordMonster({ gameId }: { gameId?: string }) {
           </Paper>
         )}
 
+        <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימות המילים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => {
+            if (v) {
+              setAgeGroup(v as AgeGroupKey);
+              setSelectedFocus(0);
+            }
+          }}
+          color="secondary"
+          fullWidth
+          sx={{ mb: 3, flexWrap: 'wrap' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ fontWeight: 700, py: 1.2 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
           מה המפלצת רוצה לאכול היום?
         </Typography>
         <Stack sx={{ gap: 1.5, mb: 4 }}>
-          {FOCUS_SETS.map((fs, i) => (
+          {focusSets.map((fs, i) => (
             <Paper
               key={i}
               onClick={() => setSelectedFocus(i)}

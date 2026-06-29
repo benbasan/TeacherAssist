@@ -34,6 +34,17 @@ can open and run in front of a class within seconds.
 - **See `ARCHITECTURE.md`** for the full system blueprint: the application shell, dynamic routing,
   the Registry Map component-resolution logic, and the decision log.
 
+## Game Content & Architecture Rules
+- **All text pools, prompts, or questions for games must NEVER be hardcoded inside components.**
+  They must reside in `src/data/content/[game-id]-content.json` and must launch with a minimum
+  density of 40 highly creative examples distributed across applicable age cohorts.
+- **Age-cohort schema:** content JSON is keyed by `lower_elementary` (כיתות א'-ג'),
+  `upper_elementary` (כיתות ד'-ו'), and `junior_high_high` (כיתות ז'-י"ב). Include a cohort tier
+  ONLY where it is pedagogically applicable to the game's mechanics; omit tiers that don't fit, but
+  pack the remaining ones so the grand total still exceeds 40 unique items.
+- The component imports the JSON and renders the pool **dynamically based on the selected age
+  category** — never re-introduce in-component content arrays.
+
 ## TONE OF VOICE
 Warm, encouraging, professional, and accessible **Hebrew**. Speak to teachers with respect and to
 children with kindness. Avoid jargon; keep copy short and uplifting.

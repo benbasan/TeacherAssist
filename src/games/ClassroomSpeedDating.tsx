@@ -24,6 +24,7 @@ import EmojiPeopleRoundedIcon from '@mui/icons-material/EmojiPeopleRounded';
 import EventSeatRoundedIcon from '@mui/icons-material/EventSeatRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import contentData from '../data/content/social-speed-dating-content.json';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,13 +87,11 @@ function playChime(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Content model
+// Content model — text pools live in external JSON (see CLAUDE.md content rules)
 // ---------------------------------------------------------------------------
 
-type PackKey = 'icebreakers' | 'deep_chat' | 'school_life' | 'mature_reflection';
-
 interface ConversationPack {
-  key: PackKey;
+  key: string;
   label: string;
   blurb: string;
   emoji: string;
@@ -100,70 +99,20 @@ interface ConversationPack {
   prompts: string[];
 }
 
-const PACKS: Record<PackKey, ConversationPack> = {
-  icebreakers: {
-    key: 'icebreakers',
-    label: 'שוברי קרח ומצחיקים',
-    blurb: 'שאלות קלילות ומשעשעות לפתיחת שיחה בחיוך.',
-    emoji: '😄',
-    color: '#3f51b5',
-    prompts: [
-      'מהו כוח העל שהייתם הכי רוצים שיהיה לכם?',
-      'אם הייתם צריכים לאכול רק מאכל אחד במשך שנה שלמה, מה זה היה?',
-      'מה הדבר הכי מצחיק או מוזר שקרה לכם השבוע?',
-      'איזה סרט או סדרה אתם יכולים לראות מיליון פעם בלי שימאס?',
-      "מה מפחיד אתכם יותר: ג'וקים מעופפים או מבחן פתע בחשבון?",
-    ],
-  },
-  deep_chat: {
-    key: 'deep_chat',
-    label: 'שיח עמוק וערכים',
-    blurb: 'שאלות שמזמינות חשיבה, ערכים ושיתוף אישי.',
-    emoji: '💭',
-    color: '#26a69a',
-    prompts: [
-      'מה התכונה שאתם הכי מעריכים בחבר הכי טוב שלכם?',
-      'מתי היה הפעם האחרונה שהרגשתם ממש גאים בעצמכם?',
-      'אם הייתם יכולים לשנות חוק אחד במדינה או בעולם, מה הוא היה?',
-      'מה הופך יום רגיל ליום ממש טוב ומאושר בשבילכם?',
-      'איזו עצה טובה הייתם נותנים לעצמכם של לפני שנתיים?',
-    ],
-  },
-  school_life: {
-    key: 'school_life',
-    label: 'חיים בבית הספר ובכיתה',
-    blurb: 'שאלות על השגרה, הכיתה והחוויה הבית-ספרית.',
-    emoji: '🏫',
-    color: '#ab47bc',
-    prompts: [
-      'מהו המקום האהוב עליכם ביותר בחצר בית הספר בזמן ההפסקה?',
-      'איך הייתם משפרים את הכיתה שלנו כדי שיהיה יותר כיף להגיע אליה?',
-      'מה המקצוע שאתם מרגישים בו הכי חזקים, ואיזה הכי מאתגר אתכם?',
-      'אם הייתם המנהלים של בית הספר ליום אחד, מה הדבר הראשון שהייתם עושים?',
-      'מה הכלל הכי חשוב שחייב להיות בקבוצת הווטסאפ הכיתתית?',
-    ],
-  },
-  mature_reflection: {
-    key: 'mature_reflection',
-    label: 'שיח בוגר ופילוסופי',
-    blurb: 'שאלות עומק לחטיבה ולתיכון — זהות, ערכים וחברה.',
-    emoji: '🧠',
-    color: '#5c6bc0',
-    prompts: [
-      'מה הייתם רוצים שחברים שלכם יזכרו לגביכם אחרי שתסיימו את בית הספר?',
-      'עד כמה הרשתות החברתיות משפיעות על האופן שבו אתם תופסים את עצמכם באמת?',
-      'האם לחץ חברתי הוא תמיד דבר שלילי, או שהוא יכול לפעמים לדחוף אותנו למקומות חיוביים?',
-      'אם הייתם יכולים לדעת את האמת המוחלטת לגבי שאלה אחת בעולם, מה הייתם שואלים?',
-      'מהו הערך שהוא הכי "קו אדום" מבחינתכם — כזה שלא תסכימו שחבר יפגע בו (למשל: נאמנות, כנות, חופש)?',
-      'אם הייתם יכולים לחזור לגיל 10 למשך שעה אחת, איזו עצה הייתם נותנים לעצמכם הילדים?',
-    ],
-  },
-};
+interface AgeCohort {
+  label: string;
+  packs: ConversationPack[];
+  wrapup: string[];
+}
 
-const WRAPUP_QUESTIONS = [
-  'עם מי גיליתם שיש לכם יותר במשותף ממה שחשבתם?',
-  'איזו שאלה הכי גרמה לכם לעצור ולחשוב?',
-  'מה היה מאתגר יותר עבורכם — לדבר, או דווקא להקשיב?',
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+const CONTENT = contentData as Record<AgeGroupKey, AgeCohort>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const TOTAL_ROUNDS = 6;
@@ -182,6 +131,7 @@ export default function ClassroomSpeedDating({ gameId }: { gameId?: string }) {
   const navigate = useNavigate();
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('upper_elementary');
   const [pack, setPack] = useState<ConversationPack | null>(null);
   const [duration, setDuration] = useState<Duration>(45);
   const [round, setRound] = useState(1);
@@ -237,6 +187,8 @@ export default function ClassroomSpeedDating({ gameId }: { gameId?: string }) {
     return (
       <SetupScreen
         activeClassName={activeClassroom?.name ?? null}
+        ageGroup={ageGroup}
+        onAgeGroupChange={setAgeGroup}
         duration={duration}
         onDurationChange={setDuration}
         onStart={start}
@@ -245,7 +197,7 @@ export default function ClassroomSpeedDating({ gameId }: { gameId?: string }) {
   }
 
   if (stage === 'wrapup') {
-    return <WrapUpScreen onFinish={finish} />;
+    return <WrapUpScreen questions={CONTENT[ageGroup].wrapup} onFinish={finish} />;
   }
 
   // Wrap prompts if a pack has fewer than TOTAL_ROUNDS entries.
@@ -270,16 +222,21 @@ export default function ClassroomSpeedDating({ gameId }: { gameId?: string }) {
 
 function SetupScreen({
   activeClassName,
+  ageGroup,
+  onAgeGroupChange,
   duration,
   onDurationChange,
   onStart,
 }: {
   activeClassName: string | null;
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   duration: Duration;
   onDurationChange: (d: Duration) => void;
   onStart: (pack: ConversationPack) => void;
 }) {
-  const [selected, setSelected] = useState<PackKey | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const packs = CONTENT[ageGroup].packs;
 
   return (
     <Box>
@@ -313,6 +270,31 @@ function SetupScreen({
         הנחו את התלמידים לסדר את הכיסאות בשני טורים ארוכים, פנים מול פנים (שורה א' מול שורה ב').
       </Alert>
 
+      {/* Age-cohort selection */}
+      <Stack spacing={1.5} sx={{ alignItems: 'center', mb: 4 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימות השאלות?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, val) => {
+            if (val) {
+              onAgeGroupChange(val as AgeGroupKey);
+              setSelected(null);
+            }
+          }}
+          color="secondary"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ px: 3, py: 1.25, fontSize: 17, fontWeight: 700 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Stack>
+
       {/* Pack selection */}
       <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
         בחרו חבילת שיחה:
@@ -325,9 +307,8 @@ function SetupScreen({
           mb: 4,
         }}
       >
-        {(Object.keys(PACKS) as PackKey[]).map((key) => {
-          const p = PACKS[key];
-          const isSel = selected === key;
+        {packs.map((p) => {
+          const isSel = selected === p.key;
           return (
             <Card
               key={p.key}
@@ -341,7 +322,7 @@ function SetupScreen({
               }}
             >
               <CardActionArea
-                onClick={() => setSelected(key)}
+                onClick={() => setSelected(p.key)}
                 sx={{ height: '100%', alignItems: 'stretch' }}
               >
                 <CardContent sx={{ textAlign: 'center', py: 3 }}>
@@ -383,7 +364,10 @@ function SetupScreen({
           variant="contained"
           size="large"
           disabled={!selected}
-          onClick={() => selected && onStart(PACKS[selected])}
+          onClick={() => {
+            const chosen = packs.find((p) => p.key === selected);
+            if (chosen) onStart(chosen);
+          }}
           sx={{ px: 6, py: 1.75, fontSize: 22, fontWeight: 800 }}
         >
           מתחילים! ⏱️
@@ -557,7 +541,7 @@ function ActiveScreen({
 // Screen 3 — Wrap-up & feedback
 // ---------------------------------------------------------------------------
 
-function WrapUpScreen({ onFinish }: { onFinish: () => void }) {
+function WrapUpScreen({ questions, onFinish }: { questions: string[]; onFinish: () => void }) {
   useEffect(() => {
     celebrate();
   }, []);
@@ -581,7 +565,7 @@ function WrapUpScreen({ onFinish }: { onFinish: () => void }) {
           נסכם יחד בשיחה קצרה:
         </Typography>
         <Stack spacing={2} sx={{ mb: 4 }}>
-          {WRAPUP_QUESTIONS.map((q, i) => (
+          {questions.map((q, i) => (
             <Paper
               key={q}
               elevation={2}

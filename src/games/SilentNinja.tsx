@@ -8,6 +8,8 @@ import {
   Button,
   Chip,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -16,6 +18,7 @@ import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/silent-ninja-content.json';
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -25,16 +28,21 @@ const EMERALD = '#10b981';
 const MAX_ROUNDS = 6; // safety cap when playing the elimination variant
 const FIXED_ROUNDS = 5; // no-names variant: just count brain-break rounds
 
-/** Loud action commands that get the class moving before the freeze. */
-const ACTIONS: string[] = [
-  'לרוץ במקום הכי מהר שאפשר! 🏃',
-  'לעשות פרצופים מצחיקים אחד לשני! 😜',
-  'למחוא כפיים לפי קצב מהיר! 👏',
-  'לרקוד כאילו אף אחד לא רואה! 💃',
-  'לקפוץ על רגל אחת! 🦵',
-  'לנופף בידיים כמו תמנון! 🐙',
-  'לחקות חיה שאתם אוהבים! 🦁',
-  'להסתובב סביב עצמכם לאט! 🌀',
+// Movement-command pools live in external JSON (see CLAUDE.md → Game Content &
+// Architecture Rules), keyed by age cohort.
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortActions {
+  label: string;
+  actions: string[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortActions>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 function pick<T>(arr: T[]): T {
@@ -121,10 +129,11 @@ export default function SilentNinja({ gameId }: { gameId?: string }) {
   const sfxRef = useRef<Sfx>(new Sfx());
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [players, setPlayers] = useState<string[]>([]); // full roster for this round
   const [ninjas, setNinjas] = useState<string[]>([]); // still standing
   const [round, setRound] = useState(0);
-  const [action, setAction] = useState<string>(ACTIONS[0]);
+  const [action, setAction] = useState<string>(CONTENT.lower_elementary.actions[0]);
 
   const usesNames = players.length > 0;
 
@@ -139,7 +148,7 @@ export default function SilentNinja({ gameId }: { gameId?: string }) {
   };
 
   const nextAction = () => {
-    setAction(pick(ACTIONS));
+    setAction(pick(CONTENT[ageGroup].actions));
     setStage('action');
   };
 
@@ -178,6 +187,8 @@ export default function SilentNinja({ gameId }: { gameId?: string }) {
         <SetupScreen
           activeClassName={activeClassroom?.name ?? null}
           presentRoster={presentRoster}
+          ageGroup={ageGroup}
+          onAgeGroupChange={setAgeGroup}
           onStart={begin}
         />
       );
@@ -208,10 +219,14 @@ export default function SilentNinja({ gameId }: { gameId?: string }) {
 function SetupScreen({
   activeClassName,
   presentRoster,
+  ageGroup,
+  onAgeGroupChange,
   onStart,
 }: {
   activeClassName: string | null;
   presentRoster: string[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onStart: (names: string[]) => void;
 }) {
   const hasClass = activeClassName !== null;
@@ -335,6 +350,25 @@ function SetupScreen({
               }
             />
           )}
+
+          <Stack spacing={1.25} sx={{ width: '100%', alignItems: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מתאימות הפקודות?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
 
           <Button
             variant="contained"

@@ -19,31 +19,33 @@ import CasinoRoundedIcon from '@mui/icons-material/CasinoRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/compliment-pack-content.json';
 
 // ---------------------------------------------------------------------------
 // Shared data & helpers
 // ---------------------------------------------------------------------------
 
-/** Single-direction prompts: one student compliments another. */
-const PROMPTS: string[] = [
-  'על איזו תכונה יפה תרצו לפרגן?',
-  'ספרו על רגע שבו הוא/היא גרמו לכם לחייך.',
-  'איזה הישג שלו/שלה שווה חגיגה?',
-  'על מה תרצו להגיד תודה?',
-  'מה הדבר שהכי כיף לעשות איתו/איתה?',
-  'איזו מילה טובה הם צריכים לשמוע היום?',
-  'במה הם עוזרים לכיתה שלנו?',
-];
+// Text pools live in external JSON (see CLAUDE.md → Game Content & Architecture Rules).
+// Each age cohort exposes `solo` prompts (one student compliments another) and `pair`
+// prompts (two students share mutually).
+interface CohortPrompts {
+  label: string;
+  solo: string[];
+  pair: string[];
+}
 
-/** Mutual prompts for two students together. */
-const PAIR_PROMPTS: string[] = [
-  'שתפו בזיכרון משותף שמשמח אתכם.',
-  'ספרו זה לזה תכונה אחת שאתם מעריכים.',
-  'מה הדבר הכי כיף שעשיתם יחד השנה?',
-  'על מה תרצו להודות זה לזה?',
-  'מה למדתם אחד מהשני?',
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortPrompts>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 /** Fisher–Yates shuffle (returns a new array). */
@@ -85,6 +87,7 @@ export default function ComplimentGamePack({ gameId }: { gameId?: string }) {
   );
 
   const [stage, setStage] = useState<Stage>('names');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [names, setNames] = useState<string[]>(presentRoster);
 
   const start = (parsed: string[]) => {
@@ -92,9 +95,18 @@ export default function ComplimentGamePack({ gameId }: { gameId?: string }) {
     setStage('modeSelect');
   };
 
+  const cohort = CONTENT[ageGroup];
+
   switch (stage) {
     case 'names':
-      return <NamesInput initial={names.length ? names : presentRoster} onStart={start} />;
+      return (
+        <NamesInput
+          initial={names.length ? names : presentRoster}
+          ageGroup={ageGroup}
+          onAgeGroupChange={setAgeGroup}
+          onStart={start}
+        />
+      );
     case 'modeSelect':
       return (
         <ModeSelect
@@ -104,11 +116,18 @@ export default function ComplimentGamePack({ gameId }: { gameId?: string }) {
         />
       );
     case 'chain':
-      return <ChainMode names={names} gameId={gameId} onBack={() => setStage('modeSelect')} />;
+      return (
+        <ChainMode
+          names={names}
+          prompts={cohort.solo}
+          gameId={gameId}
+          onBack={() => setStage('modeSelect')}
+        />
+      );
     case 'duo':
-      return <DuoMode names={names} onBack={() => setStage('modeSelect')} />;
+      return <DuoMode names={names} prompts={cohort.pair} onBack={() => setStage('modeSelect')} />;
     case 'slot':
-      return <SlotMode names={names} onBack={() => setStage('modeSelect')} />;
+      return <SlotMode names={names} prompts={cohort.solo} onBack={() => setStage('modeSelect')} />;
   }
 }
 
@@ -118,9 +137,13 @@ export default function ComplimentGamePack({ gameId }: { gameId?: string }) {
 
 function NamesInput({
   initial,
+  ageGroup,
+  onAgeGroupChange,
   onStart,
 }: {
   initial: string[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onStart: (names: string[]) => void;
 }) {
   const [raw, setRaw] = useState(initial.join('\n'));
@@ -150,6 +173,29 @@ function NamesInput({
             רשימת התלמידים נטענה מהכיתה הפעילה (ללא הנעדרים). אפשר לערוך ידנית — שם
             לכל שורה או מופרד בפסיק — ולבחור אחד משלושת המשחקים.
           </Typography>
+
+          <Stack spacing={1.25} sx={{ alignItems: 'center', width: '100%' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מותאמים הפרגונים?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, val) => val && onAgeGroupChange(val as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton
+                  key={g.key}
+                  value={g.key}
+                  sx={{ px: 2.5, py: 1, fontSize: 15, fontWeight: 700 }}
+                >
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
 
           <TextField
             label="שמות התלמידים"
@@ -319,26 +365,28 @@ interface ChainTurn {
  * where each student compliments the next, and the last closes back to the
  * first. The previous receiver always becomes the next giver.
  */
-function buildChain(names: string[]): ChainTurn[] {
+function buildChain(names: string[], prompts: string[]): ChainTurn[] {
   const perm = shuffle(names);
   const n = perm.length;
   return perm.map((receiver, i) => ({
     giver: perm[(i - 1 + n) % n],
     receiver,
-    prompt: pick(PROMPTS),
+    prompt: pick(prompts),
   }));
 }
 
 function ChainMode({
   names,
+  prompts,
   gameId,
   onBack,
 }: {
   names: string[];
+  prompts: string[];
   gameId?: string;
   onBack: () => void;
 }) {
-  const [chain, setChain] = useState<ChainTurn[]>(() => buildChain(names));
+  const [chain, setChain] = useState<ChainTurn[]>(() => buildChain(names, prompts));
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   useMarkGamePlayed(gameId, done);
@@ -356,7 +404,7 @@ function ChainMode({
   };
 
   const restart = () => {
-    setChain(buildChain(names));
+    setChain(buildChain(names, prompts));
     setStep(0);
     setDone(false);
   };
@@ -450,11 +498,11 @@ interface Group {
 }
 
 /** Pairs students into duos; an odd student joins the last duo as a trio. */
-function buildGroups(names: string[]): Group[] {
+function buildGroups(names: string[], prompts: string[]): Group[] {
   const shuffled = shuffle(names);
   const groups: Group[] = [];
   for (let i = 0; i < shuffled.length; i += 2) {
-    groups.push({ members: shuffled.slice(i, i + 2), prompt: pick(PAIR_PROMPTS) });
+    groups.push({ members: shuffled.slice(i, i + 2), prompt: pick(prompts) });
   }
   // If the last group is a singleton (odd count), merge it into the previous one.
   if (groups.length > 1 && groups[groups.length - 1].members.length === 1) {
@@ -464,15 +512,23 @@ function buildGroups(names: string[]): Group[] {
   return groups;
 }
 
-function DuoMode({ names, onBack }: { names: string[]; onBack: () => void }) {
-  const [groups, setGroups] = useState<Group[]>(() => buildGroups(names));
+function DuoMode({
+  names,
+  prompts,
+  onBack,
+}: {
+  names: string[];
+  prompts: string[];
+  onBack: () => void;
+}) {
+  const [groups, setGroups] = useState<Group[]>(() => buildGroups(names, prompts));
   const [index, setIndex] = useState(0);
 
   const group = groups[index];
   const isLast = index === groups.length - 1;
 
   const reshuffle = () => {
-    setGroups(buildGroups(names));
+    setGroups(buildGroups(names, prompts));
     setIndex(0);
   };
 
@@ -563,7 +619,15 @@ interface SlotResult {
   receiver: string;
 }
 
-function SlotMode({ names, onBack }: { names: string[]; onBack: () => void }) {
+function SlotMode({
+  names,
+  prompts,
+  onBack,
+}: {
+  names: string[];
+  prompts: string[];
+  onBack: () => void;
+}) {
   const [display, setDisplay] = useState<SlotResult>({ giver: '?', prompt: '?', receiver: '?' });
   const [spinning, setSpinning] = useState(false);
   const [settled, setSettled] = useState(false);
@@ -592,14 +656,14 @@ function SlotMode({ names, onBack }: { names: string[]; onBack: () => void }) {
 
     intervalRef.current = setInterval(() => {
       const giver = pick(names);
-      setDisplay({ giver, prompt: pick(PROMPTS), receiver: randomReceiver(giver) });
+      setDisplay({ giver, prompt: pick(prompts), receiver: randomReceiver(giver) });
     }, 70);
 
     timeoutRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
       const giver = pick(names);
-      setDisplay({ giver, prompt: pick(PROMPTS), receiver: randomReceiver(giver) });
+      setDisplay({ giver, prompt: pick(prompts), receiver: randomReceiver(giver) });
       setSpinning(false);
       setSettled(true);
       celebrate();

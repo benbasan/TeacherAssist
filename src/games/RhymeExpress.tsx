@@ -15,23 +15,30 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/rhyme-express-content.json';
 
 // ── Content ────────────────────────────────────────────────────────────────
+// Rhyme rounds live in external JSON (see CLAUDE.md → Game Content & Architecture
+// Rules), keyed by age cohort (rhyming is a beginning-literacy skill, so only the
+// two elementary cohorts apply). Each play draws ROUNDS_PER_GAME random rounds.
 
 type RoundData = { target: string; correct: string[]; wrong: string[] };
 
-const ROUNDS: Record<'easy' | 'hard', RoundData[]> = {
-  easy: [
-    { target: 'בלון',   correct: ['חלון',   'שעון',   'סבון'  ], wrong: ['בננה',   'ספר',    'כדור'  ] },
-    { target: 'ילדה',   correct: ['כיתה',   'מורה',   'שירה'  ], wrong: ['שולחן',  'ספר',    'ילד'   ] },
-    { target: 'ספרים',  correct: ['ילדים',  'כלבים',  'בנים'  ], wrong: ['בית',    'שמש',    'ציפור' ] },
-  ],
-  hard: [
-    { target: 'פרפר',   correct: ['תמר',    'עכבר',   'יקר'   ], wrong: ['שמש',    'גבינה',  'תיק'   ] },
-    { target: 'כדור',   correct: ['תור',    'אור',    'גור'   ], wrong: ['כיסא',   'מורה',   'ילד'   ] },
-    { target: 'קניון',  correct: ['עיפרון', 'ארון',   'לימון' ], wrong: ['שולחן',  'חתול',   'בית'   ] },
-  ],
-};
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary';
+
+interface CohortRounds {
+  label: string;
+  rounds: RoundData[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortRounds>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string; desc: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label, desc: 'חרוזים פשוטים: ון, ה, ים' },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label, desc: 'חרוזים מורכבים: ר, ור, ון' },
+];
+
+const ROUNDS_PER_GAME = 3;
 
 const TILE_COLORS = ['#fce4ec', '#e8eaf6', '#e8f5e9', '#fff8e1', '#f3e5f5', '#e0f7fa'];
 const TILE_BORDERS = ['#e91e63', '#3f51b5', '#4caf50', '#ff9800', '#9c27b0', '#00bcd4'];
@@ -111,7 +118,8 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
   const [manualInput, setManualInput] = useState('');
 
   const [stage, setStage] = useState<Stage>('setup');
-  const [difficulty, setDifficulty] = useState<'easy' | 'hard'>('easy');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
+  const [gameRounds, setGameRounds] = useState<RoundData[]>([]);
   const [round, setRound] = useState(0);
   const [platform, setPlatform] = useState<TileState[]>([]);
   const [loadedWords, setLoadedWords] = useState<(string | null)[]>([null, null, null]);
@@ -124,8 +132,7 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
-  function initRound(roundIdx: number, diff: 'easy' | 'hard') {
-    const r = ROUNDS[diff][roundIdx];
+  function initRound(r: RoundData) {
     setPlatform(
       shuffleArr([
         ...r.correct.map((text) => ({ text, correct: true, loaded: false, failed: false })),
@@ -138,8 +145,10 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
   }
 
   function startGame() {
+    const drawn = shuffleArr(CONTENT[ageGroup].rounds).slice(0, ROUNDS_PER_GAME);
+    setGameRounds(drawn);
     setRound(0);
-    initRound(0, difficulty);
+    initRound(drawn[0]);
     setStage('playing');
   }
 
@@ -161,13 +170,13 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
         setTrainDeparting(true);
         setTimeout(() => {
           const next = round + 1;
-          if (next >= ROUNDS[difficulty].length) {
+          if (next >= gameRounds.length) {
             sfx.victory();
             celebrate();
             setStage('victory');
           } else {
             setRound(next);
-            initRound(next, difficulty);
+            initRound(gameRounds[next]);
           }
         }, 1400);
       }
@@ -184,6 +193,7 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
   function reset() {
     setStage('setup');
     setRound(0);
+    setGameRounds([]);
     setPlatform([]);
     setLoadedWords([null, null, null]);
     setFailingTile(null);
@@ -267,36 +277,34 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
         )}
 
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-          בחרו רמת קושי:
+          לאיזו שכבת גיל מתאימים החרוזים?
         </Typography>
         <Stack sx={{ gap: 1.5, mb: 4 }}>
-          {([['easy', '🟢', 'קל', 'חרוזים פשוטים: ון, ה, ים'], ['hard', '🔴', 'מאתגר', 'חרוזים מורכבים: ר, ור, ון']] as const).map(
-            ([key, dot, label, desc]) => (
-              <Paper
-                key={key}
-                onClick={() => setDifficulty(key)}
-                elevation={difficulty === key ? 3 : 1}
-                sx={{
-                  p: 2.5,
-                  cursor: 'pointer',
-                  borderRadius: 4,
-                  border: '2px solid',
-                  borderColor: difficulty === key ? 'primary.main' : 'transparent',
-                  bgcolor: difficulty === key ? '#eef0fb' : 'background.paper',
-                  transition: 'all 0.2s',
-                  '&:hover': { borderColor: 'primary.light' },
-                }}
-              >
-                <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="h5">{dot}</Typography>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700 }}>{label}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>{desc}</Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-            )
-          )}
+          {AGE_GROUPS.map((g) => (
+            <Paper
+              key={g.key}
+              onClick={() => setAgeGroup(g.key)}
+              elevation={ageGroup === g.key ? 3 : 1}
+              sx={{
+                p: 2.5,
+                cursor: 'pointer',
+                borderRadius: 4,
+                border: '2px solid',
+                borderColor: ageGroup === g.key ? 'primary.main' : 'transparent',
+                bgcolor: ageGroup === g.key ? '#eef0fb' : 'background.paper',
+                transition: 'all 0.2s',
+                '&:hover': { borderColor: 'primary.light' },
+              }}
+            >
+              <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h5">🚂</Typography>
+                <Box>
+                  <Typography sx={{ fontWeight: 700 }}>{g.label}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{g.desc}</Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          ))}
         </Stack>
 
         <Button
@@ -345,14 +353,14 @@ export default function RhymeExpress({ gameId }: { gameId?: string }) {
   }
 
   // ── Playing ────────────────────────────────────────────────────────────
-  const currentRound = ROUNDS[difficulty][round];
+  const currentRound = gameRounds[round];
 
   return (
     <Box sx={{ maxWidth: 680, mx: 'auto', p: { xs: 2, sm: 3 } }}>
       {/* Progress chips */}
       <Stack sx={{ flexDirection: 'row', justifyContent: 'center', gap: 1.5, mb: 2 }}>
         <Chip
-          label={`רכבת ${round + 1} מתוך ${ROUNDS[difficulty].length}`}
+          label={`רכבת ${round + 1} מתוך ${gameRounds.length}`}
           variant="outlined"
           size="small"
         />

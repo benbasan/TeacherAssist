@@ -10,6 +10,8 @@ import {
   TextField,
   LinearProgress,
   Fade,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -18,9 +20,11 @@ import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/mind-readers-content.json';
 
 // ---------------------------------------------------------------------------
-// Content
+// Content — question pools live in external JSON (see CLAUDE.md → Game Content &
+// Architecture Rules), keyed by age cohort. Each play draws ROUNDS×2 at random.
 // ---------------------------------------------------------------------------
 
 interface Question {
@@ -28,39 +32,19 @@ interface Question {
   options: [string, string, string];
 }
 
-const QUESTIONS: Question[] = [
-  {
-    text: 'אם הייתי מקבל מיליון שקל, הדבר הראשון שהייתי קונה זה...',
-    options: ['מחשב גיימינג מטורף', 'כרטיס טיסה סביב העולם', 'תורם הכל לצדקה'],
-  },
-  {
-    text: 'הסיוט הכי גדול שלי בבית הספר זה...',
-    options: ['ששכחתי את האוכל בבית', 'מבחן פתע בחשבון', 'להישאר לבד בהפסקה'],
-  },
-  {
-    text: 'כשאני אהיה גדול, הכי סביר שתמצאו אותי עובד בתור...',
-    options: ['מפתח אפליקציות', 'וטרינר בגן חיות', 'שחקן ספורט מפורסם'],
-  },
-  {
-    text: 'אם הייתי יכול לקבל סופר-כוח אחד, הייתי בוחר...',
-    options: ['לטוס', 'להיות בלתי נראה', 'לנסוע בזמן'],
-  },
-  {
-    text: 'הדבר שהכי מעצבן אותי בכיתה זה...',
-    options: ['רעש כשאני מנסה להתרכז', 'כשמישהו לוקח את הדברים שלי', 'שיעורי בית בסוף יום ארוך'],
-  },
-  {
-    text: 'בסוף שבוע מושלם אני הכי אוהב...',
-    options: ['לשחק עם חברים בחוץ', 'לשחק משחקי מחשב/מובייל', 'לשכב ולצפות בסדרות'],
-  },
-  {
-    text: 'אם הייתי יכול לבחור את ארוחת הצהריים בבית הספר, הייתי בוחר...',
-    options: ['פיצה בכל יום', 'שניצל עם צ\'יפס', 'שוורמה ענקית'],
-  },
-  {
-    text: 'הדבר שהכי גאה בו השנה זה...',
-    options: ['שיפרתי בלימודים', 'עזרתי לחבר בזמן קשה', 'למדתי משהו חדש לגמרי'],
-  },
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortQuestions {
+  label: string;
+  questions: Question[];
+}
+
+const CONTENT = contentData as unknown as Record<AgeGroupKey, CohortQuestions>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const ROUNDS = 3;
@@ -112,11 +96,10 @@ export default function MindReaders({ gameId }: { gameId?: string }) {
     [activeClassroom, absentStudents],
   );
 
-  const [stage, setStage] = useState<Stage>(
-    presentRoster.length >= 2 ? 'pick_transmitter' : 'names',
-  );
+  const [stage, setStage] = useState<Stage>('names');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('upper_elementary');
   const [names, setNames] = useState<string[]>(presentRoster);
-  const [questions] = useState<Question[]>(() => shuffle(QUESTIONS).slice(0, ROUNDS * 2));
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [qIdx, setQIdx] = useState(0);
   const [transmitter, setTransmitter] = useState<string>('');
   const [secretIdx, setSecretIdx] = useState<number | null>(null);
@@ -130,6 +113,7 @@ export default function MindReaders({ gameId }: { gameId?: string }) {
 
   const confirmNames = (n: string[]) => {
     setNames(n);
+    setQuestions(shuffle(CONTENT[ageGroup].questions).slice(0, ROUNDS * 2));
     setStage('pick_transmitter');
   };
 
@@ -173,6 +157,8 @@ export default function MindReaders({ gameId }: { gameId?: string }) {
         <NamesScreen
           activeClassName={activeClassroom?.name ?? null}
           presentRoster={presentRoster}
+          ageGroup={ageGroup}
+          onAgeGroupChange={setAgeGroup}
           onConfirm={confirmNames}
         />
       );
@@ -233,10 +219,14 @@ export default function MindReaders({ gameId }: { gameId?: string }) {
 function NamesScreen({
   activeClassName,
   presentRoster,
+  ageGroup,
+  onAgeGroupChange,
   onConfirm,
 }: {
   activeClassName: string | null;
   presentRoster: string[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onConfirm: (names: string[]) => void;
 }) {
   const hasClass = activeClassName !== null;
@@ -314,6 +304,25 @@ function NamesScreen({
               helperText={canStart ? `זוהו ${players.length} תלמידים 🎈` : 'הזינו לפחות 2 שמות כדי להתחיל'}
             />
           )}
+
+          <Stack spacing={1.25} sx={{ width: '100%', alignItems: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מתאימות השאלות?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
 
           <Button variant="contained" color="primary" size="large" fullWidth
             disabled={!canStart} onClick={() => onConfirm(players)}

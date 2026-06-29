@@ -9,14 +9,20 @@ import {
   TextField,
   IconButton,
   Fade,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/letter-bridge-content.json';
 
 // ── Content ────────────────────────────────────────────────────────────────
+// Letter-pair word pools live in external JSON (see CLAUDE.md → Game Content &
+// Architecture Rules), keyed by age cohort. Homophone-spelling discrimination
+// stays relevant through high school, so all three cohorts apply.
 
 type PlankData = {
   template: string; // word with '?' marking the missing letter, e.g. '?רנב'
@@ -31,55 +37,19 @@ type LetterPair = {
   planks: PlankData[];
 };
 
-const LETTER_PAIRS: LetterPair[] = [
-  {
-    letters: ['א', 'ע'],
-    label: "א' מול ע'",
-    emoji: '🐘',
-    planks: [
-      { template: '?רנב',  answer: 0, full: 'ארנב'  },
-      { template: '?נבים', answer: 1, full: 'ענבים' },
-      { template: 'ש?ון',  answer: 1, full: 'שעון'  },
-      { template: '?כל',   answer: 0, full: 'אכל'   },
-      { template: '?ץ',    answer: 1, full: 'עץ'    },
-    ],
-  },
-  {
-    letters: ['ח', 'כ'],
-    label: "ח' מול כ'",
-    emoji: '🐸',
-    planks: [
-      { template: '?לב',    answer: 0, full: 'חלב'    },
-      { template: '?פתור',  answer: 1, full: 'כפתור'  },
-      { template: '?תול',   answer: 0, full: 'חתול'   },
-      { template: '?וכב',   answer: 1, full: 'כוכב'   },
-      { template: '?גיגה',  answer: 0, full: 'חגיגה'  },
-    ],
-  },
-  {
-    letters: ['ט', 'ת'],
-    label: "ט' מול ת'",
-    emoji: '🐯',
-    planks: [
-      { template: '?פוח',   answer: 1, full: 'תפוח'   },
-      { template: 'מ?וס',   answer: 0, full: 'מטוס'   },
-      { template: '?יול',   answer: 0, full: 'טיול'   },
-      { template: '?בעת',   answer: 0, full: 'טבעת'   },
-      { template: '?שובה',  answer: 1, full: 'תשובה'  },
-    ],
-  },
-  {
-    letters: ['ס', 'ש'],
-    label: "ס' מול ש'",
-    emoji: '🦔',
-    planks: [
-      { template: '?ולחן',  answer: 1, full: 'שולחן'  },
-      { template: '?פינה',  answer: 0, full: 'ספינה'  },
-      { template: '?ועל',   answer: 1, full: 'שועל'   },
-      { template: '?ליחה',  answer: 0, full: 'סליחה'  },
-      { template: '?מלה',   answer: 1, full: 'שמלה'   },
-    ],
-  },
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortPairs {
+  label: string;
+  letterPairs: LetterPair[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortPairs>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 // ── SFX ───────────────────────────────────────────────────────────────────
@@ -183,6 +153,7 @@ export default function LetterBridge({ gameId }: { gameId?: string }) {
   const [manualInput, setManualInput] = useState('');
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [selectedPair, setSelectedPair] = useState(0);
   const [plankIndex, setPlankIndex] = useState(0); // 0–4
   const [answerState, setAnswerState] = useState<AnswerState>(null);
@@ -195,7 +166,8 @@ export default function LetterBridge({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
-  const currentPair = LETTER_PAIRS[selectedPair];
+  const letterPairs = CONTENT[ageGroup].letterPairs;
+  const currentPair = letterPairs[selectedPair];
   const currentPlank = currentPair.planks[plankIndex];
 
   function startGame() {
@@ -326,11 +298,34 @@ export default function LetterBridge({ gameId }: { gameId?: string }) {
           </Paper>
         )}
 
+        <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימות המילים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => {
+            if (v) {
+              setAgeGroup(v as AgeGroupKey);
+              setSelectedPair(0);
+            }
+          }}
+          color="secondary"
+          fullWidth
+          sx={{ mb: 3, flexWrap: 'wrap' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ fontWeight: 700, py: 1.2 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
           איזה זוג אותיות נתרגל היום?
         </Typography>
         <Stack sx={{ gap: 1.5, mb: 4 }}>
-          {LETTER_PAIRS.map((pair, i) => (
+          {letterPairs.map((pair, i) => (
             <Paper
               key={i}
               onClick={() => setSelectedPair(i)}

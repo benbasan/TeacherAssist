@@ -8,6 +8,8 @@ import {
   Button,
   Chip,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -18,33 +20,32 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
+import contentData from '../data/content/emotion-generator-content.json';
 
 // ---------------------------------------------------------------------------
-// Slot data
+// Slot data — emotion/action pools live in external JSON (see CLAUDE.md →
+// Game Content & Architecture Rules), keyed by age cohort.
 // ---------------------------------------------------------------------------
 
-const EMOTIONS = [
-  { label: 'שמחה', emoji: '😄' },
-  { label: 'עצב', emoji: '😢' },
-  { label: 'כעס', emoji: '😠' },
-  { label: 'בהלה', emoji: '😱' },
-  { label: 'התרגשות', emoji: '🤩' },
-  { label: 'קנאה', emoji: '😒' },
-  { label: 'גאווה', emoji: '😤' },
-  { label: 'שעמום', emoji: '🥱' },
-];
+interface SlotItem {
+  label: string;
+  emoji: string;
+}
 
-const ACTIONS = [
-  { label: 'רוכב על אופניים', emoji: '🚴' },
-  { label: 'מדבר בטלפון', emoji: '📞' },
-  { label: 'שוטף כלים', emoji: '🍽️' },
-  { label: 'בורח מדינוזאור', emoji: '🦕' },
-  { label: 'מנסה לתפוס זבוב', emoji: '🪰' },
-  { label: 'מנצח במשחק מחשב', emoji: '🎮' },
-  { label: 'מנסה לקרוא ספר', emoji: '📖' },
-  { label: 'מבשל ארוחה', emoji: '🍳' },
-  { label: 'שר בקול רם', emoji: '🎤' },
-  { label: 'מחפש את המפתחות', emoji: '🔑' },
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortSlots {
+  label: string;
+  emotions: SlotItem[];
+  actions: SlotItem[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortSlots>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const EMERALD = '#10b981';
@@ -64,8 +65,8 @@ function celebrate() {
 // ---------------------------------------------------------------------------
 
 interface Combo {
-  emotion: (typeof EMOTIONS)[number];
-  action: (typeof ACTIONS)[number];
+  emotion: SlotItem;
+  action: SlotItem;
 }
 
 type Stage = 'names' | 'pick_actor' | 'spin' | 'peek' | 'acting' | 'reveal' | 'summary';
@@ -82,17 +83,20 @@ export default function EmotionGenerator({ gameId }: { gameId?: string }) {
     [activeClassroom, absentStudents],
   );
 
-  const [stage, setStage] = useState<Stage>(
-    presentRoster.length >= 1 ? 'pick_actor' : 'names',
-  );
+  const [stage, setStage] = useState<Stage>('names');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [players, setPlayers] = useState<string[]>(presentRoster);
   const [actor, setActor] = useState('');
-  const [combo, setCombo] = useState<Combo>({ emotion: EMOTIONS[0], action: ACTIONS[0] });
+  const cohort = CONTENT[ageGroup];
+  const [combo, setCombo] = useState<Combo>({
+    emotion: CONTENT.lower_elementary.emotions[0],
+    action: CONTENT.lower_elementary.actions[0],
+  });
   const [round, setRound] = useState(0);
 
   useMarkGamePlayed(gameId, stage === 'summary');
 
-  const spinCombo = (): Combo => ({ emotion: pick(EMOTIONS), action: pick(ACTIONS) });
+  const spinCombo = (): Combo => ({ emotion: pick(cohort.emotions), action: pick(cohort.actions) });
 
   const confirmNames = (n: string[]) => {
     setPlayers(n);
@@ -122,6 +126,8 @@ export default function EmotionGenerator({ gameId }: { gameId?: string }) {
         <NamesScreen
           activeClassName={activeClassroom?.name ?? null}
           presentRoster={presentRoster}
+          ageGroup={ageGroup}
+          onAgeGroupChange={setAgeGroup}
           onConfirm={confirmNames}
         />
       );
@@ -138,6 +144,8 @@ export default function EmotionGenerator({ gameId }: { gameId?: string }) {
         <SpinScreen
           combo={combo}
           actor={actor}
+          emotions={cohort.emotions}
+          actions={cohort.actions}
           onDone={() => setStage('peek')}
         />
       );
@@ -170,10 +178,14 @@ export default function EmotionGenerator({ gameId }: { gameId?: string }) {
 function NamesScreen({
   activeClassName,
   presentRoster,
+  ageGroup,
+  onAgeGroupChange,
   onConfirm,
 }: {
   activeClassName: string | null;
   presentRoster: string[];
+  ageGroup: AgeGroupKey;
+  onAgeGroupChange: (g: AgeGroupKey) => void;
   onConfirm: (n: string[]) => void;
 }) {
   const hasClass = activeClassName !== null;
@@ -232,6 +244,25 @@ function NamesScreen({
               onChange={(e) => setRaw(e.target.value)} multiline minRows={4} fullWidth
               helperText={players.length ? `זוהו ${players.length} שחקנים 🎈` : 'אפשר לשחק גם ללא שמות — המורה בוחר שחקן ידנית'} />
           )}
+
+          <Stack spacing={1.25} sx={{ width: '100%', alignItems: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              לאיזו שכבת גיל מתאימים הרגשות והפעולות?
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={ageGroup}
+              onChange={(_, v) => v && onAgeGroupChange(v as AgeGroupKey)}
+              color="secondary"
+              sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+            >
+              {AGE_GROUPS.map((g) => (
+                <ToggleButton key={g.key} value={g.key} sx={{ px: 2.5, py: 1, fontWeight: 700 }}>
+                  {g.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
 
           <Button variant="contained" color="primary" size="large" fullWidth
             onClick={() => onConfirm(players)}
@@ -363,15 +394,19 @@ function SlotReel({
 function SpinScreen({
   combo,
   actor,
+  emotions,
+  actions,
   onDone,
 }: {
   combo: Combo;
   actor: string;
+  emotions: SlotItem[];
+  actions: SlotItem[];
   onDone: () => void;
 }) {
   const [spinning, setSpinning] = useState(true);
-  const emotionFinalIdx = EMOTIONS.findIndex((e) => e.label === combo.emotion.label);
-  const actionFinalIdx = ACTIONS.findIndex((a) => a.label === combo.action.label);
+  const emotionFinalIdx = emotions.findIndex((e) => e.label === combo.emotion.label);
+  const actionFinalIdx = actions.findIndex((a) => a.label === combo.action.label);
 
   useEffect(() => {
     const id = setTimeout(() => setSpinning(false), SPIN_DURATION);
@@ -387,8 +422,8 @@ function SpinScreen({
       </Paper>
 
       <Stack direction="row" spacing={2}>
-        <SlotReel items={EMOTIONS} finalIdx={emotionFinalIdx} spinning={spinning} />
-        <SlotReel items={ACTIONS} finalIdx={actionFinalIdx} spinning={spinning} />
+        <SlotReel items={emotions} finalIdx={emotionFinalIdx} spinning={spinning} />
+        <SlotReel items={actions} finalIdx={actionFinalIdx} spinning={spinning} />
       </Stack>
 
       {!spinning && (

@@ -10,14 +10,20 @@ import {
   IconButton,
   LinearProgress,
   Fade,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useClassrooms, useMarkGamePlayed } from '../context/ClassroomContext';
 import { parseNames } from '../utils/parseNames';
 import confetti from 'canvas-confetti';
+import contentData from '../data/content/punctuation-orchestra-content.json';
 
 // ── Content ────────────────────────────────────────────────────────────────
+// The readable sentence pool lives in external JSON (see CLAUDE.md → Game Content
+// & Architecture Rules), keyed by age cohort. The 3 punctuation SIGNS are the core
+// mechanic and stay in-component.
 
 type Sign = {
   char: string;
@@ -51,12 +57,19 @@ const SIGNS: Sign[] = [
   },
 ];
 
-const PRESET_SENTENCES = [
-  'ירד היום גשם',
-  'מצאתי שוקולד בתיק',
-  'יש לנו מחר טיול',
-  'הכלב שלי חולה',
-  'אכלתי פיצה ענקית',
+type AgeGroupKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+interface CohortSentences {
+  label: string;
+  sentences: string[];
+}
+
+const CONTENT = contentData as Record<AgeGroupKey, CohortSentences>;
+
+const AGE_GROUPS: { key: AgeGroupKey; label: string }[] = [
+  { key: 'lower_elementary', label: CONTENT.lower_elementary.label },
+  { key: 'upper_elementary', label: CONTENT.upper_elementary.label },
+  { key: 'junior_high_high', label: CONTENT.junior_high_high.label },
 ];
 
 const TOTAL_ROUNDS = 9; // 3 cycles through all 3 signs
@@ -133,6 +146,7 @@ export default function PunctuationOrchestra({ gameId }: { gameId?: string }) {
   const [manualInput, setManualInput] = useState('');
 
   const [stage, setStage] = useState<Stage>('setup');
+  const [ageGroup, setAgeGroup] = useState<AgeGroupKey>('lower_elementary');
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [customSentence, setCustomSentence] = useState('');
   const [useCustom, setUseCustom] = useState(false);
@@ -147,9 +161,10 @@ export default function PunctuationOrchestra({ gameId }: { gameId?: string }) {
     ? (activeClassroom.students ?? []).filter((n) => !absentStudents.includes(n))
     : parseNames(manualInput);
 
+  const presetSentences = CONTENT[ageGroup].sentences;
   const activeSentence = useCustom && customSentence.trim()
     ? customSentence.trim()
-    : PRESET_SENTENCES[selectedPreset];
+    : presetSentences[selectedPreset];
 
   const currentSign = SIGNS[signIndex];
   const dramaPercent = Math.round((roundCount / TOTAL_ROUNDS) * 100);
@@ -271,12 +286,36 @@ export default function PunctuationOrchestra({ gameId }: { gameId?: string }) {
         )}
 
         <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
+          לאיזו שכבת גיל מתאימים המשפטים?
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          value={ageGroup}
+          onChange={(_, v) => {
+            if (v) {
+              setAgeGroup(v as AgeGroupKey);
+              setSelectedPreset(0);
+              setUseCustom(false);
+            }
+          }}
+          color="secondary"
+          fullWidth
+          sx={{ mb: 3, flexWrap: 'wrap' }}
+        >
+          {AGE_GROUPS.map((g) => (
+            <ToggleButton key={g.key} value={g.key} sx={{ fontWeight: 700, py: 1.2 }}>
+              {g.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
+        <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>
           בחרו משפט לתזמורת:
         </Typography>
 
         {/* Preset sentences */}
         <Stack sx={{ gap: 1, mb: 2 }}>
-          {PRESET_SENTENCES.map((s, i) => (
+          {presetSentences.map((s, i) => (
             <Paper
               key={i}
               onClick={() => { setSelectedPreset(i); setUseCustom(false); }}

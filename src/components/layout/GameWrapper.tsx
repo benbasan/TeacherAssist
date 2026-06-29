@@ -33,7 +33,7 @@ export default function GameWrapper({ game, children }: GameWrapperProps) {
         </Box>
         <Button
           component={RouterLink}
-          to="/"
+          to="/classroom"
           variant="outlined"
           color="primary"
           startIcon={<ArrowForwardRoundedIcon />}

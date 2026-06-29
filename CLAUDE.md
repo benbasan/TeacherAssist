@@ -11,10 +11,18 @@ can open and run in front of a class within seconds.
 - **MUI (Material-UI) for all UI.** Build every screen from MUI components.
 - **RTL first.** The entire app is right-to-left, in Hebrew. Layout, icons, and flows must read
   naturally from right to left.
-- **Vibrant & child-friendly.** Playful, warm, and inviting — suitable for a classroom.
-- **Rounded corners:** `borderRadius: 16` everywhere (set globally on the theme `shape`).
-- **Palette:** warm **indigo** primary + **teal** secondary.
-- **Font:** `Rubik` (loaded via Google Fonts, RTL-friendly).
+- **Two environments, two skins.** The root `/` is a split-screen gateway into **מרחב הכיתה**
+  (`/classroom`) and **מרחב המורה** (`/teacher-workspace`). See `ARCHITECTURE.md` §3/§10.
+  - **מרחב הכיתה** — the student-facing smartboard surface: **vibrant & child-friendly**, playful
+    pastel, oversized projector-legible typography. Uses the default `educationalTheme`.
+  - **מרחב המורה** — the teacher's private back-office: a **dark navy/slate corporate** dashboard
+    (`src/theme/corporateTheme.ts`, applied via a nested `ThemeProvider`) with a sticky
+    "do-not-project" banner, thin crisp borders, and no playful animations.
+- **Rounded corners:** `borderRadius: 16` on the default theme (`shape`); the corporate theme uses
+  a tighter radius for a crisper, professional feel.
+- **Palette:** classroom = warm **indigo** primary + **teal** secondary; teacher office = deep
+  **navy** primary + **slate** secondary (dark mode).
+- **Font:** `Rubik` (loaded via Google Fonts, RTL-friendly) — shared by both themes.
 
 ## CODE STYLE
 - **React + TypeScript.**

@@ -109,7 +109,7 @@ export default function StepByStepReflection({ gameId }: { gameId?: string }) {
     if (activeClassroomId && gameId) {
       void markGameAsPlayedInClass(activeClassroomId, gameId);
     }
-    navigate('/');
+    navigate('/classroom');
   };
 
   if (stage === 'setup' || !topic) {

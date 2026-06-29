@@ -7,9 +7,9 @@ import { educationalTheme } from './theme/educationalTheme';
 import { ClassroomProvider } from './context/ClassroomContext';
 import AppLayout from './components/layout/AppLayout';
 import RequireActiveClass from './components/layout/RequireActiveClass';
-import CatalogPage from './pages/CatalogPage';
+import HomePage from './pages/HomePage';
+import ClassroomWorkspacePage from './pages/ClassroomWorkspacePage';
 import GamePage from './pages/GamePage';
-import ToolsCatalogPage from './pages/ToolsCatalogPage';
 import ToolPage from './pages/ToolPage';
 import DashboardPage from './pages/DashboardPage';
 import WhatsNewPage from './pages/WhatsNewPage';
@@ -30,12 +30,16 @@ export default function App() {
             <BrowserRouter>
               <Routes>
                 <Route element={<AppLayout />}>
-                  {/* Roster-aware routes are gated behind active-class selection. */}
+                  {/* Landing gateway — split-screen routing to the two environments. */}
+                  <Route path="/" element={<HomePage />} />
+                  {/* מרחב הכיתה — the smartboard hub (games catalog + utilities).
+                      Gated by active-class selection: a signed-in teacher picks a
+                      class first; signed-out guests pass straight through. */}
                   <Route
-                    path="/"
+                    path="/classroom"
                     element={
                       <RequireActiveClass>
-                        <CatalogPage />
+                        <ClassroomWorkspacePage />
                       </RequireActiveClass>
                     }
                   />
@@ -47,17 +51,7 @@ export default function App() {
                       </RequireActiveClass>
                     }
                   />
-                  {/* Classroom Utilities — gated like the games catalog: a signed-in
-                      teacher picks an active class first (§9). Signed-out guests pass
-                      through and use the tools' manual name entry. */}
-                  <Route
-                    path="/tools"
-                    element={
-                      <RequireActiveClass>
-                        <ToolsCatalogPage />
-                      </RequireActiveClass>
-                    }
-                  />
+                  {/* Individual classroom utility — gated like the games catalog. */}
                   <Route
                     path="/tools/:toolId"
                     element={
@@ -66,6 +60,8 @@ export default function App() {
                       </RequireActiveClass>
                     }
                   />
+                  {/* The standalone tools catalog merged into /classroom. */}
+                  <Route path="/tools" element={<Navigate to="/classroom" replace />} />
                   {/* Teacher's Private Workspace — ungated route, SignedIn-gated inside
                       the layout (sensitive student data); no RequireActiveClass (§10). */}
                   <Route path="/teacher-workspace" element={<TeacherWorkspaceLayout />}>

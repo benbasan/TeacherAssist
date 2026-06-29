@@ -193,7 +193,7 @@ export default function RumorExpress({ gameId }: { gameId?: string }) {
       void markGameAsPlayedInClass(activeClassroomId, gameId);
     }
     celebrate();
-    navigate('/');
+    navigate('/classroom');
   };
 
   // 45s pressure timer per hand-off; freezes at 0 (teacher stays in control).

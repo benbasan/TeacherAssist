@@ -42,3 +42,46 @@ export const TARGET_AGE_LABELS: Record<string, string> = {
 export function targetAgeLabel(targetAge: string): string {
   return TARGET_AGE_LABELS[targetAge] ?? targetAge;
 }
+
+// ---------------------------------------------------------------------------
+// Age-cohort bridge (classroom catalog filter)
+// ---------------------------------------------------------------------------
+// The classroom catalog filters games by three pedagogical cohorts. The games
+// registry, however, stores finer/over-lapping `targetAge` keys (e.g.
+// `elementary_to_high`). This bridge maps each registry key onto one or more
+// cohorts so the 3-bucket filter can match games WITHOUT migrating the data.
+
+export type CohortKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
+
+/** The three filter cohorts, in display order, with their Hebrew labels. */
+export const COHORTS: { key: CohortKey; label: string }[] = [
+  { key: 'lower_elementary', label: "א'-ג'" },
+  { key: 'upper_elementary', label: "ד'-ו'" },
+  { key: 'junior_high_high', label: 'ז\'-י"ב' },
+];
+
+/** Registry `targetAge` key → the cohorts a game with that key belongs to. */
+const TARGET_AGE_TO_COHORTS: Record<string, CohortKey[]> = {
+  preschool: ['lower_elementary'],
+  elementary_low: ['lower_elementary'],
+  elementary_high: ['upper_elementary'],
+  elementary_high_and_junior_high: ['upper_elementary', 'junior_high_high'],
+  elementary_to_high: ['lower_elementary', 'upper_elementary', 'junior_high_high'],
+  middle: ['junior_high_high'],
+  high: ['junior_high_high'],
+};
+
+/**
+ * Maps a registry `targetAge` value to the cohort buckets it should appear under
+ * in the classroom catalog filter. Unknown keys fall back to all three cohorts
+ * so a game is never hidden by a missing mapping.
+ */
+export function cohortsForTargetAge(targetAge: string): CohortKey[] {
+  return (
+    TARGET_AGE_TO_COHORTS[targetAge] ?? [
+      'lower_elementary',
+      'upper_elementary',
+      'junior_high_high',
+    ]
+  );
+}

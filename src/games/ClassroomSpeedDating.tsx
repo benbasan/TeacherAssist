@@ -162,7 +162,7 @@ export default function ClassroomSpeedDating({ gameId }: { gameId?: string }) {
     if (activeClassroomId && gameId) {
       void markGameAsPlayedInClass(activeClassroomId, gameId);
     }
-    navigate('/');
+    navigate('/classroom');
   };
 
   // Countdown for the running phase. One interval per (round) while running;

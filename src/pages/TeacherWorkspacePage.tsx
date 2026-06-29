@@ -5,8 +5,10 @@ import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 
-const INDIGO = '#3f51b5';
-const TEAL = '#26a69a';
+// Accents tuned to read on the dark corporate surface.
+const INDIGO = '#7986cb';
+const TEAL = '#4db6ac';
+const VIOLET = '#9575cd';
 
 interface OfficeTool {
   title: string;
@@ -18,7 +20,7 @@ interface OfficeTool {
 
 const TOOLS: OfficeTool[] = [
   {
-    title: 'תיק תלמיד: יומן תובנות פדגוגיות',
+    title: 'תיק תלמיד ויומן תובנות',
     description:
       'תיעוד פרטי של תובנות התנהגותיות ולימודיות לכל תלמיד — חיזוקים, נקודות לשיפור והערות, על ציר זמן מסודר.',
     icon: FolderSharedRoundedIcon,
@@ -26,7 +28,7 @@ const TOOLS: OfficeTool[] = [
     accent: INDIGO,
   },
   {
-    title: 'מחולל סיכומי וואטסאפ',
+    title: 'מחולל תקשורת וארכיון הודעות',
     description: 'הפקת סיכום שבועי מנוסח להורים — נטען אוטומטית מתובנות התלמידים, נערך, נשלח ונשמר בארכיון.',
     icon: ChatRoundedIcon,
     to: '/teacher-workspace/whatsapp-generator',
@@ -36,16 +38,20 @@ const TOOLS: OfficeTool[] = [
     title: 'אדריכל השיעור',
     description: 'תכנון מהלך שיעור מובנה עם פתיחה, גוף וסיכום מותאמים לכיתה. בקרוב.',
     icon: ArchitectureRoundedIcon,
-    accent: '#7e57c2',
+    accent: VIOLET,
   },
 ];
 
-/** Dashboard of the teacher's private back-office tools (מרחב המורה). See §10. */
+/**
+ * Dashboard of the teacher's private back-office tools (מרחב המורה). Rendered
+ * inside the dark `corporateTheme` (see TeacherWorkspaceLayout): high data
+ * density, thin crisp borders, no playful hover animations. See §10.
+ */
 export default function TeacherWorkspacePage() {
   return (
     <Box>
       <Stack spacing={0.5} sx={{ mb: 3 }}>
-        <Typography variant="h4" color="primary.dark" sx={{ fontWeight: 800 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary' }}>
           💼 מרחב המורה
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -56,7 +62,7 @@ export default function TeacherWorkspacePage() {
       <Box
         sx={{
           display: 'grid',
-          gap: 3,
+          gap: 2,
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
         }}
       >
@@ -70,7 +76,7 @@ export default function TeacherWorkspacePage() {
                 spacing={1}
                 sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}
               >
-                <Icon sx={{ fontSize: 40, color: tool.accent }} />
+                <Icon sx={{ fontSize: 36, color: tool.accent }} />
                 {!enabled && <Chip label="בקרוב" size="small" color="default" />}
               </Stack>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
@@ -85,16 +91,11 @@ export default function TeacherWorkspacePage() {
           return (
             <Card
               key={tool.title}
-              elevation={enabled ? 3 : 0}
-              variant={enabled ? 'elevation' : 'outlined'}
+              elevation={0}
               sx={{
                 height: '100%',
-                borderTop: `5px solid ${tool.accent}`,
-                opacity: enabled ? 1 : 0.6,
-                ...(enabled && {
-                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
-                }),
+                borderTop: `3px solid ${tool.accent}`,
+                opacity: enabled ? 1 : 0.55,
               }}
             >
               {enabled && tool.to ? (

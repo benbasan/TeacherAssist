@@ -1,8 +1,7 @@
 import { AppBar, Toolbar, Typography, Button, Box, Container, Chip, Tooltip, IconButton } from '@mui/material';
 import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
-import GridViewRoundedIcon from '@mui/icons-material/GridViewRounded';
-import BuildRoundedIcon from '@mui/icons-material/BuildRounded';
+import CastForEducationRoundedIcon from '@mui/icons-material/CastForEducationRounded';
 import ClassRoundedIcon from '@mui/icons-material/ClassRounded';
 import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
@@ -11,15 +10,17 @@ import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { useClassrooms } from '../../context/ClassroomContext';
 
-const NAV_LINKS = [
-  { label: 'קטלוג המשחקים', to: '/', icon: <GridViewRoundedIcon /> },
-  { label: 'כלים לניהול כיתה', to: '/tools', icon: <BuildRoundedIcon /> },
-  { label: 'מה חדש', to: '/whats-new', icon: <AutoAwesomeRoundedIcon /> },
-];
+const AMBER = '#ffca28'; // accent for the private link — deters accidental projection
 
 export default function Navbar({ onToggleAttendance }: { onToggleAttendance?: () => void }) {
   const { pathname } = useLocation();
   const { activeClassroom, setActiveClassroom } = useClassrooms();
+
+  // The classroom hub also owns the in-classroom game + tool screens.
+  const classroomActive =
+    pathname === '/classroom' || pathname.startsWith('/game') || pathname.startsWith('/tools');
+  const whatsNewActive = pathname === '/whats-new';
+  const workspaceActive = pathname.startsWith('/teacher-workspace');
 
   return (
     <AppBar position="sticky" color="primary" elevation={2}>
@@ -81,29 +82,32 @@ export default function Navbar({ onToggleAttendance }: { onToggleAttendance?: ()
               )}
             </SignedIn>
 
-            {NAV_LINKS.map((link) => {
-              const active =
-                link.to === '/'
-                  ? pathname === '/' || pathname.startsWith('/game')
-                  : link.to === '/tools'
-                    ? pathname.startsWith('/tools')
-                    : pathname === link.to;
-              return (
-                <Button
-                  key={link.to}
-                  component={RouterLink}
-                  to={link.to}
-                  color="inherit"
-                  startIcon={link.icon}
-                  sx={{
-                    fontWeight: active ? 800 : 500,
-                    bgcolor: active ? 'rgba(255,255,255,0.18)' : 'transparent',
-                  }}
-                >
-                  {link.label}
-                </Button>
-              );
-            })}
+            {/* PRIMARY — the public classroom smartboard surface (always visible). */}
+            <Button
+              component={RouterLink}
+              to="/classroom"
+              color="inherit"
+              startIcon={<CastForEducationRoundedIcon />}
+              sx={{
+                fontWeight: classroomActive ? 800 : 500,
+                bgcolor: classroomActive ? 'rgba(255,255,255,0.18)' : 'transparent',
+              }}
+            >
+              ללוח החכם (מרחב הכיתה)
+            </Button>
+
+            <Button
+              component={RouterLink}
+              to="/whats-new"
+              color="inherit"
+              startIcon={<AutoAwesomeRoundedIcon />}
+              sx={{
+                fontWeight: whatsNewActive ? 800 : 500,
+                bgcolor: whatsNewActive ? 'rgba(255,255,255,0.18)' : 'transparent',
+              }}
+            >
+              מה חדש
+            </Button>
 
             {/* "My classes" + private workspace — only for a signed-in teacher. */}
             <SignedIn>
@@ -123,16 +127,17 @@ export default function Navbar({ onToggleAttendance }: { onToggleAttendance?: ()
                 <Button
                   component={RouterLink}
                   to="/teacher-workspace"
-                  color="inherit"
                   variant="outlined"
                   startIcon={<LockRoundedIcon />}
                   sx={{
-                    borderColor: 'rgba(255,255,255,0.5)',
-                    fontWeight: pathname.startsWith('/teacher-workspace') ? 800 : 600,
-                    bgcolor: pathname.startsWith('/teacher-workspace') ? 'rgba(255,255,255,0.18)' : 'transparent',
+                    color: AMBER,
+                    borderColor: AMBER,
+                    fontWeight: workspaceActive ? 800 : 600,
+                    bgcolor: workspaceActive ? 'rgba(255,202,40,0.18)' : 'transparent',
+                    '&:hover': { borderColor: AMBER, bgcolor: 'rgba(255,202,40,0.12)' },
                   }}
                 >
-                  💼 מרחב המורה
+                  💼 מרחב המורה (פרטי)
                 </Button>
               </Tooltip>
               <UserButton afterSignOutUrl="/" />

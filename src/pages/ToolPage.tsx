@@ -32,7 +32,7 @@ function NotFound({ message }: { message: string }) {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           {message}
         </Typography>
-        <Button component={RouterLink} to="/tools" variant="contained">
+        <Button component={RouterLink} to="/classroom" variant="contained">
           חזרה לקטלוג
         </Button>
       </Stack>

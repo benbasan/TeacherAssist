@@ -43,7 +43,7 @@ export default function ToolWrapper({ tool, children }: ToolWrapperProps) {
         </Box>
         <Button
           component={RouterLink}
-          to="/tools"
+          to="/classroom"
           variant="outlined"
           color="primary"
           startIcon={<ArrowForwardRoundedIcon />}

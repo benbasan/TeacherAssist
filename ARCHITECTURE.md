@@ -100,7 +100,7 @@ src/
 ├── tools/                      # Classroom Utilities (NON-game tools; see §9)
 │   ├── iconMap.tsx             # MUI icon-name string → icon component (tools' icon resolver)
 │   ├── RosterPanel.tsx         # Shared hybrid-names ingestion (active roster ⊖ absent | manual)
-│   ├── ToolWrapper.tsx         # Lightweight frame: title + description + back-to-/tools (no chips)
+│   ├── ToolWrapper.tsx         # Lightweight frame: title + description + back-to-/classroom (no chips)
 │   ├── NameWheel.tsx           # Tool 1: Canvas wheel-of-fortune name picker
 │   ├── TeamMaker.tsx           # Tool 2: shuffle + split class into groups/pairs
 │   ├── MarbleJar.tsx           # Tool 3: cloud-persisted marble goal/reward tracker (§7, §9)
@@ -109,15 +109,16 @@ src/
 │   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
 │   └── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
 ├── pages/
-│   ├── CatalogPage.tsx         # Grid of game cards; subject/targetAge filters
+│   ├── HomePage.tsx            # Landing gateway at "/": split-screen → /classroom | /teacher-workspace (§3)
+│   ├── ClassroomWorkspacePage.tsx # מרחב הכיתה hub at /classroom: games catalog (subject + cohort ToggleButton filters) + STATIC utilities section (§3/§9)
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
-│   ├── ToolsCatalogPage.tsx    # Grid of utility cards (reads tools-registry.json; §9)
 │   ├── ToolPage.tsx            # Resolves a tool by URL :toolId → renders via Tools Map (§9)
 │   ├── DashboardPage.tsx       # Teacher workspace: create/edit/delete saved classrooms (SignedIn)
-│   ├── TeacherWorkspacePage.tsx # מרחב המורה dashboard: office-tool cards (§10)
+│   ├── TeacherWorkspacePage.tsx # מרחב המורה dashboard: office-tool cards, dark corporate skin (§10)
 │   └── WhatsNewPage.tsx        # Timeline rendered from whats-new.json
 ├── theme/
-│   ├── educationalTheme.ts     # MUI theme (indigo/teal, Rubik, rtl, borderRadius 16)
+│   ├── educationalTheme.ts     # Default MUI theme (indigo/teal, Rubik, rtl, borderRadius 16) — gateway, navbar, classroom
+│   ├── corporateTheme.ts       # Dark navy/slate theme for מרחב המורה (nested ThemeProvider; §10)
 │   └── rtlCache.ts             # Emotion cache for RTL CSS (key "muirtl")
 └── types/
     ├── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom contracts
@@ -133,23 +134,24 @@ src/
 ```
 <ClerkProvider publishableKey={VITE_CLERK_PUBLISHABLE_KEY}>   // auth + per-user cloud storage
   <CacheProvider value={rtlCache}>      // RTL-correct CSS emission
-    <ThemeProvider theme={educationalTheme}>
+    <ThemeProvider theme={educationalTheme}>   // global (light) theme; teacher-workspace nests corporateTheme (§10)
       <CssBaseline />
       <ClassroomProvider>               // classroom + session state, inside Clerk so it can read useUser() (§8)
         <BrowserRouter>
           <Routes>
             <Route element={<AppLayout />}>      // Navbar + AttendanceDrawer + <Outlet/>
-              "/"              → <RequireActiveClass><CatalogPage /></RequireActiveClass>
+              "/"              → <HomePage />     // split-screen landing gateway (ungated)
+              "/classroom"     → <RequireActiveClass><ClassroomWorkspacePage /></RequireActiveClass>  // games + static utilities (§9)
               "/game/:gameId"  → <RequireActiveClass><GamePage /></RequireActiveClass>
-              "/tools"         → <RequireActiveClass><ToolsCatalogPage /></RequireActiveClass>  // gated like the catalog (§9)
               "/tools/:toolId" → <RequireActiveClass><ToolPage /></RequireActiveClass>          // gated; dynamic tool resolution (§9)
-              "/teacher-workspace" → <TeacherWorkspaceLayout/>   // ungated route, SignedIn-gated inside (§10)
+              "/tools"         → <Navigate to="/classroom" replace />   // catalog merged into /classroom
+              "/teacher-workspace" → <TeacherWorkspaceLayout/>   // ungated route, SignedIn-gated + dark corporateTheme inside (§10)
                   index               → <TeacherWorkspacePage/>     // office-tool dashboard
                   "student-insights"  → <StudentInsights/>          // private תיק תלמיד tool
                   "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
-              "*"              → <Navigate to="/" replace />   // unknown path → catalog
+              "*"              → <Navigate to="/" replace />   // unknown path → gateway
             </Route>
           </Routes>
         </BrowserRouter>
@@ -166,24 +168,38 @@ src/
 - **Why a `:gameId` param:** games are data, not code-defined routes. A single dynamic
   route serves *every* game; the page looks the game up at render time (§4). Adding a game
   never requires adding a route.
-- **Why the `*` fallback:** any unknown/stale URL redirects to the catalog instead of a
+- **Why the `*` fallback:** any unknown/stale URL redirects to the landing gateway instead of a
   blank screen.
 
+### Two environments (the split — §3a)
+The root `/` is a **split-screen landing gateway** (`HomePage`) routing to two deliberately distinct
+environments:
+- **מרחב הכיתה** (`/classroom`, `ClassroomWorkspacePage`) — guest-open, playful pastel, smartboard-
+  optimized. Merges the games catalog (filterable by `subject` + age **cohort**) with a permanent,
+  filter-immune classroom-utilities section. Uses the default `educationalTheme`.
+- **מרחב המורה** (`/teacher-workspace`) — Clerk-protected dark navy/slate dashboard (nested
+  `corporateTheme`) with a sticky "do-not-project" privacy banner (§10).
+
+The **age-cohort filter** shows three buckets (א'-ג' / ד'-ו' / ז'-י"ב). Because the registry's
+`targetAge` keys are finer/overlapping, `taxonomy.ts` bridges them via `cohortsForTargetAge()` →
+`CohortKey[]` (no data migration). The utilities section is rendered by a separate block with its own
+state, so the game filters never touch it.
+
 ### Entry session flow (AppLayout + gateway + attendance)
-All routes now nest under a single **`AppLayout`** (`<Route element={<AppLayout/>}>`), which renders
-the `Navbar`, the right-anchored collapsible **`AttendanceDrawer`**, and the routed content via
-`<Outlet/>`. `AppLayout` owns the drawer's open/close state and hands a toggle to the `Navbar`.
+All routes nest under a single **`AppLayout`** (`<Route element={<AppLayout/>}>`), which renders the
+`Navbar`, the right-anchored collapsible **`AttendanceDrawer`**, and the routed content via `<Outlet/>`.
+`AppLayout` owns the drawer's open/close state and hands a toggle to the `Navbar`.
 
-The catalog and game routes are wrapped in **`RequireActiveClass`**, the **entry gatekeeper**:
+The `/classroom`, `/game/:gameId`, and `/tools/:toolId` routes are wrapped in **`RequireActiveClass`**,
+the **entry gatekeeper**:
 - *Signed-in teacher, no active class selected* → render `ClassSelectionGateway` (a playful grid of
-  the teacher's classes; clicking one calls `setActiveClassroom(id)` and unlocks the catalog). A
-  teacher with **zero** classes sees a CTA into `/dashboard`.
-- *Signed out* → render the route as-is (the catalog stays open to anonymous visitors, unchanged).
+  the teacher's classes; clicking one calls `setActiveClassroom(id)` and unlocks the hub). A teacher
+  with **zero** classes sees a CTA into `/dashboard`.
+- *Signed out* → render the route as-is (the hub stays open to anonymous visitors / guests).
 
-`/dashboard` and `/whats-new` are deliberately **left ungated** so a class-less teacher isn't
-trapped away from the place they create classes. The `Navbar` shows a `כיתה: … 🔄` chip (click to
-switch class → returns to the gateway) and an attendance toggle, both only when a class is active.
-Active-class selection and attendance are **session-only** (in-memory) — see §7.
+`/` (gateway), `/dashboard`, and `/whats-new` are deliberately **left ungated**. The `Navbar` shows a
+`כיתה: … 🔄` chip (click to switch class → returns to the gateway) and an attendance toggle, both only
+when a class is active. Active-class selection and attendance are **session-only** (in-memory) — see §7.
 
 ### Deployment / Routing (SPA rewrites)
 Because routing is client-side (`BrowserRouter`), a hard refresh or direct visit to a deep URL
@@ -333,10 +349,11 @@ color }`; `targetAgeLabel()`). This keeps presentation out of the data file whil
 catalog/wrapper render a per-subject emoji icon and accent color.
 
 Consumers (all render purely from data — never hard-code a game list):
-- **`CatalogPage.tsx`** imports `games-registry.json` as `EducationalGame[]`, derives the
-  subject + targetAge option lists, filters by them, and renders a card grid (icon/color from
-  `taxonomy`). Each card links to `/game/${game.id}`. When an active class has a game in its
-  `playedGames`, the card shows a corner "שוחק כבר בכיתה זו 👍" `Chip` (emerald).
+- **`ClassroomWorkspacePage.tsx`** (`/classroom`) imports `games-registry.json` as
+  `EducationalGame[]`, derives the subject option list, filters by `subject` + age **cohort**
+  (`cohortsForTargetAge`, §3), and renders a card grid (icon/color from `taxonomy`). Each card links
+  to `/game/${game.id}`. When an active class has a game in its `playedGames`, the card shows a corner
+  "שוחק כבר בכיתה זו 👍" `Chip` (emerald). The same page also renders the static utilities grid (§9).
 - **`GamePage.tsx`** consumes the registry for lookup + the Registry Map for resolution (§4).
 - **`GameWrapper.tsx`** frames each game with the subject icon/label + estimated time.
 - **`WhatsNewPage.tsx`** imports `whats-new.json` as `WhatsNewEntry[]`, sorts by `date`
@@ -438,7 +455,7 @@ runs on its **own parallel contract** so the two domains stay decoupled:
 | -------------- | ------------------------------ | ------------------------ |
 | Registry       | `data/games-registry.json`     | `data/tools-registry.json` |
 | Type           | `EducationalGame`              | `ClassroomTool` (`types/tool.types.ts`) |
-| Catalog page   | `CatalogPage` (`/`)            | `ToolsCatalogPage` (`/tools`) |
+| Catalog surface | `ClassroomWorkspacePage` top section (`/classroom`) | same page, bottom static section (`/classroom`) |
 | Dynamic route  | `/game/:gameId`                | `/tools/:toolId` |
 | Resolver       | `REGISTRY_MAP[componentName]`  | `TOOLS_MAP[tool.id]` (`ToolPage.tsx`) |
 | Frame          | `GameWrapper` (subject/time chips, records play) | `ToolWrapper` (title + description only) |
@@ -523,10 +540,16 @@ utilities: a private teacher back-office that must **never be projected** in cla
   with child routes `index` → `TeacherWorkspacePage` (office-tool dashboard) and `student-insights` →
   `StudentInsights`. Like `/dashboard` the route is **ungated by `RequireActiveClass`**, but the layout
   **gates its content behind Clerk `<SignedIn>`** (a `<SignedOut>` sign-in prompt otherwise) because it
-  holds student data. The layout also renders a **persistent privacy banner** ("🔒 שולחן עבודה פרטי…
-  אין להקרין מסך זה…") on every workspace page.
-- **Navbar:** a distinct, SignedIn-only "💼 מרחב המורה" outlined link with a Tooltip
-  ("שולחן עבודה פרטי - לא להקרנה בכיתה"), active for `pathname.startsWith('/teacher-workspace')`.
+  holds student data. The layout also renders a **sticky privacy banner** ("🔒 שולחן עבודה פרטי
+  ומאובטח… אין להקרין אותו על הלוח החכם…", amber-accented, parks beneath the navbar) on every
+  workspace page.
+- **Dark corporate skin:** the layout nests `<ThemeProvider theme={corporateTheme}>` +
+  `<ScopedCssBaseline>` (dark navy/slate, low radius, thin crisp borders) so this subtree is visually
+  unmistakable from the playful classroom surface. The global app theme stays `educationalTheme`; the
+  shared `Navbar` (rendered by `AppLayout`, outside this subtree) keeps its indigo skin.
+- **Navbar:** a distinct, SignedIn-only "💼 מרחב המורה (פרטי)" **amber-accented** outlined link with a
+  lock icon + Tooltip ("שולחן עבודה פרטי - לא להקרנה בכיתה"), active for
+  `pathname.startsWith('/teacher-workspace')`.
 - **Decoupled class selection (key design choice):** `StudentInsights` keeps a **local**
   `selectedClassId` (seeded from `activeClassroomId` but it **never calls `setActiveClassroom`**), so
   reviewing records — possibly at home — does not disturb the smartboard teaching session / attendance.
@@ -1345,3 +1368,22 @@ Append a dated entry here for every significant technical decision.
   (result feedback, not a prompt pool). **This completed the §11 content-externalization sweep:** of the 22
   games, 19 were migrated and 3 skipped (`ComplimentTimeBomb`, `MathCodebreaker`, `SilentSyncTower` — no
   externalizable text pool). No registry/whats-new/taxonomy change.
+- **2026-06-29 — Two-environment split: landing gateway + מרחב הכיתה (`/classroom`) vs מרחב המורה (dark theme).**
+  *Why:* the app opened straight onto the games catalog with one indigo/teal light theme everywhere, so
+  the student-facing smartboard surface and the teacher's private back-office were visually identical —
+  sensitive pedagogical data looked like a projectable game. We wanted a strict, professional separation.
+  *How:* `/` is now a split-screen **`HomePage`** gateway → `/classroom` (playful pastel, guest-open) or
+  `/teacher-workspace` (Clerk-protected). The new **`ClassroomWorkspacePage`** merges the old `CatalogPage`
+  + `ToolsCatalogPage`: a games catalog filtered by `subject` + 3 age **cohorts** via `ToggleButtonGroup`,
+  plus a permanent, **filter-immune** "🛠️ כלים מהירים" utilities section (separate block/state). The
+  cohort filter bridges the registry's finer `targetAge` keys through a new `cohortsForTargetAge()` in
+  `taxonomy.ts` — **no data migration** (the registry/content JSON are untouched; `elementary_to_high`
+  maps to all three, `elementary_high_and_junior_high` to upper+junior, etc.). `TeacherWorkspaceLayout`
+  nests a new dark **`corporateTheme`** (navy/slate, low radius, thin borders) via `ThemeProvider` +
+  `ScopedCssBaseline` and a sticky amber privacy banner; the global theme stays `educationalTheme`.
+  *Routing:* `/tools` (catalog) redirects to `/classroom`; `/game/:gameId` and `/tools/:toolId` keep their
+  `RequireActiveClass` gate; `CatalogPage`/`ToolsCatalogPage` were deleted. *Navigation repointed:* every
+  "back to catalog" / `navigate('/')` (GameWrapper, ToolWrapper, RumorExpress, ClassroomSpeedDating,
+  StepByStepReflection) now targets `/classroom`; the Navbar replaced the catalog+tools links with one
+  "ללוח החכם (מרחב הכיתה)" link + a SignedIn-only amber "💼 מרחב המורה (פרטי)" lock link. No
+  registry/whats-new/taxonomy-data changes.

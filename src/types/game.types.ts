@@ -1,4 +1,4 @@
-// Core domain types for TeacherAssist.
+// Core domain types for friendteach.
 // Every game in the platform is described by an `EducationalGame` entry in
 // `src/data/games-registry.json`, and announced via a `WhatsNewEntry` in
 // `src/data/whats-new.json`.

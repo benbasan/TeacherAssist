@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — TeacherAssist System Blueprint
+# ARCHITECTURE.md — friendteach System Blueprint
 
 This is the **living blueprint** of the system. It must always match the actual codebase.
 Read it (and `CLAUDE.md`) before any change, and update it *first* for any structural,
@@ -9,7 +9,7 @@ behind significant choices.
 
 ## 1. Overview & Tech Stack
 
-TeacherAssist is a data-driven catalog of small, self-contained educational games for the
+friendteach is a data-driven catalog of small, self-contained educational games for the
 classroom. The entire UI is **RTL / Hebrew**.
 
 | Concern        | Choice |

@@ -1,5 +1,4 @@
-import { AppBar, Toolbar, Typography, Button, Box, Container, Chip, Tooltip, IconButton } from '@mui/material';
-import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import { AppBar, Toolbar, Button, Box, Container, Chip, Tooltip, IconButton } from '@mui/material';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import CastForEducationRoundedIcon from '@mui/icons-material/CastForEducationRounded';
 import ClassRoundedIcon from '@mui/icons-material/ClassRounded';
@@ -38,10 +37,21 @@ export default function Navbar({ onToggleAttendance }: { onToggleAttendance?: ()
               flexGrow: 1,
             }}
           >
-            <SchoolRoundedIcon sx={{ fontSize: 32 }} />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
-              TeacherAssist
-            </Typography>
+            <Box
+              component="img"
+              src="/logo.svg"
+              alt="friendteach"
+              sx={{
+                height: 40,
+                display: 'block',
+                // Logo is transparent with dark-teal art — give it a light pill
+                // so it stays legible on the indigo app bar.
+                bgcolor: '#ffffff',
+                borderRadius: 2,
+                px: 1.25,
+                py: 0.5,
+              }}
+            />
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

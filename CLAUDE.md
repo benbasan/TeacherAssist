@@ -1,9 +1,9 @@
-# CLAUDE.md — TeacherAssist Architectural Manifesto
+# CLAUDE.md — friendteach Architectural Manifesto
 
 This file is the project's "brain". Read it before making any change.
 
 ## PROJECT MISSION
-TeacherAssist is an automated repository for **daily educational games** that help teachers with
+friendteach is an automated repository for **daily educational games** that help teachers with
 classroom engagement. Each game is a small, self-contained, plug-and-play experience that a teacher
 can open and run in front of a class within seconds.
 

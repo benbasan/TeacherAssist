@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 import { indigo, teal } from '@mui/material/colors';
 
 /**
- * The TeacherAssist theme: RTL, vibrant and child-friendly.
+ * The friendteach theme: RTL, vibrant and child-friendly.
  * Warm indigo primary + teal secondary, Rubik font, generous 16px corners.
  */
 export const educationalTheme = createTheme({

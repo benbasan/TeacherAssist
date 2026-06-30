@@ -13,8 +13,14 @@ export default function HomePage() {
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 4, sm: 6 } }}>
       <Stack spacing={1} sx={{ mb: { xs: 4, sm: 5 }, textAlign: 'center', alignItems: 'center' }}>
+        <Box
+          component="img"
+          src="/logo.svg"
+          alt="friendteach"
+          sx={{ width: '100%', maxWidth: { xs: 260, sm: 420 }, mb: 1 }}
+        />
         <Typography variant="h2" sx={{ fontWeight: 800, fontSize: { xs: 34, sm: 48 } }} color="primary.dark">
-          ברוכים הבאים ל-TeacherAssist
+          ברוכים הבאים ל-friendteach
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 680 }}>
           לאן תרצו להיכנס היום? בחרו את המרחב המתאים — כל אחד מעוצב למטרה שונה לגמרי.

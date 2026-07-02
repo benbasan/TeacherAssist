@@ -3,6 +3,7 @@ import AutoStoriesRoundedIcon from '@mui/icons-material/AutoStoriesRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import HourglassFullRoundedIcon from '@mui/icons-material/HourglassFullRounded';
 import AssignmentIndRoundedIcon from '@mui/icons-material/AssignmentIndRounded';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import BuildRoundedIcon from '@mui/icons-material/BuildRounded';
 
 /**
@@ -14,6 +15,7 @@ const TOOL_ICONS: Record<string, SvgIconComponent> = {
   groups: GroupsRoundedIcon,
   hourglass_full: HourglassFullRoundedIcon,
   assignment_ind: AssignmentIndRoundedIcon,
+  bolt: BoltRoundedIcon,
 };
 
 /** Look up an icon component by registry name, falling back to a generic build icon. */

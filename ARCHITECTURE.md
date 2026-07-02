@@ -55,7 +55,8 @@ src/
 │   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries (games only)
 │   ├── taxonomy.ts             # subject/targetAge → Hebrew labels + icon/color (catalog visuals)
 │   ├── lessonItems.ts          # Playlist resolver: game/tool id → {title,icon,Component} (§12)
-│   └── content/                # Externalized game text pools, one per game (§11)
+│   └── content/                # Externalized game text pools, one per game (§11); also the brain-break tool pool
+│       ├── brain-break-content.json         # BrainBreak tool: flat pool of 40+ exercises keyed by category (energize/calm), NOT age cohort (§9)
 │       ├── social-speed-dating-content.json # ClassroomSpeedDating: age-cohort prompt packs + wrap-ups
 │       ├── compliment-pack-content.json     # ComplimentGamePack: age-cohort solo + pair compliment prompts
 │       ├── digital-pass-parcel-content.json # DigitalPassParcel: age-cohort social task cards
@@ -105,7 +106,8 @@ src/
 │   ├── NameWheel.tsx           # Tool 1: Canvas wheel-of-fortune name picker
 │   ├── TeamMaker.tsx           # Tool 2: shuffle + split class into groups/pairs
 │   ├── MarbleJar.tsx           # Tool 3: cloud-persisted marble goal/reward tracker (§7, §9)
-│   └── ChoreBoard.tsx          # Tool 4: fair duty-roster board (cloud + guest fallback; §7, §9)
+│   ├── ChoreBoard.tsx          # Tool 4: fair duty-roster board (cloud + guest fallback; §7, §9)
+│   └── BrainBreak.tsx          # Tool 5: 2-min movement/mindfulness break generator; content in data/content/brain-break-content.json (§9)
 ├── teacher-tools/              # מרחב המורה — private, SignedIn-only back-office tools (§10)
 │   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
 │   ├── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
@@ -533,6 +535,22 @@ calls `onReady(names)` once `names.length >= min` (wheel `min=1`, team-maker `mi
   chores[i % n]`) — even split, each student exactly once — and fires a `canvas-confetti` sparkle. A
   collapsible settings panel adds/deletes chore roles; "נקה לוח 🗑️" clears assignments; empty chores
   show "טרם שובצו תורנים ❓".
+- **`BrainBreak.tsx`** (**content-driven, roster-free** — an "emergency context-reset") — the 2-Minute
+  Brain Break Generator. Its pool lives in `data/content/brain-break-content.json` (§11-style
+  externalization, but for a *tool*): a **flat array of 40+ exercises keyed by energy `category`
+  (`energize`/`calm`), NOT by age cohort** — the teacher picks by the class's current *state*, so there
+  is no age selector. Each item is `{ id, title, category, duration (60/90s), instructions: string[],
+  icon }`; the `icon` string resolves via an in-component `ICON_MAP` (BuildRounded fallback). A
+  `stage` machine (`setup → roulette → active → finish`): two oversized category `Card`s (amber
+  ⚡ energize / lavender 🧘 calm) → a ~2s flicker "roulette" (`setInterval`, ref-cleaned) that lands on a
+  random exercise → an **active** screen with a radial `CircularProgress` countdown (seconds centered,
+  a per-second `bbTick` scale pulse), the instructions as big numbered bullets, and teacher
+  **pause/resume** (a `running` flag gating the 1s interval, the ClassroomSpeedDating strategy) +
+  **דלג/סיים** → **finish** (asset-free Web-Audio `chime()` + `canvas-confetti` +
+  "🌟 מצוין! מאופסים ומרוכזים. חוזרים ללמידה!"). An optional **`onClose`** prop makes it embeddable: in
+  the Playlist Player (§12) it renders inside a full-screen `Dialog` and swaps its return button /
+  close-bar for a "חזרה לשיעור" action instead of navigating, so the paused game underneath is never
+  reset. SFX is a small asset-free Web-Audio `Sfx` class (mirrors `ComplimentTimeBomb`/`SilentNinja`).
 
 **Adding a utility:** (1) create the component in `src/tools/`; (2) add a `{ id, title, description,
 icon }` entry to `tools-registry.json`; (3) register `id → Component` in `TOOLS_MAP` (`ToolPage.tsx`);
@@ -857,6 +875,12 @@ the **active activity**, which mounts the resolved component **keyed on `index`*
 `toolId` for tools) so each transition fully remounts fresh state. Past the last item → a celebratory
 "שיעור מושלם! כל הכבוד כיתה!" summary (`canvas-confetti`) + replay/back buttons. *Caveat:* a few games
 have an internal `navigate('/')`; tapping it mid-lesson exits the player — acceptable for v1.
+
+An **emergency "⚡ הפגת בזק!" `Fab`** (fixed bottom-right, red/amber) opens a full-screen `Dialog` that
+mounts the `BrainBreak` tool (§9) over the running activity. Because the active activity stays mounted
+(the Dialog is a portal sibling), the game keeps its exact state — the teacher runs a 60–90s break and
+closes the modal to resume precisely where they left off. `BrainBreak` receives `onClose` so its
+finish/close actions dismiss the modal instead of navigating.
 
 **Entry points.** `TeacherWorkspacePage` — the formerly-"בקרוב" **אדריכל השיעור** card now links to
 `/teacher-workspace/lesson-builder`. `ClassroomWorkspacePage` — a header **"📅 טען מערך שיעור מוכן"**
@@ -1458,3 +1482,17 @@ Append a dated entry here for every significant technical decision.
   for clean fresh state; a `canvas-confetti` completion summary closes the lesson. Entry points: the
   formerly-"בקרוב" `TeacherWorkspacePage` "אדריכל השיעור" card (now linked) + a "📅 טען מערך שיעור מוכן"
   dialog on `ClassroomWorkspacePage`. No registry/whats-new/taxonomy-data changes.
+- **2026-07-02 — Classroom Utility #5: Brain Break Generator + emergency FAB in the Playlist Player.**
+  *Why:* teachers needed an instant "context-reset" for classroom regulation — energize a tired class or
+  calm a rowdy one in 60–90s — including the ability to interrupt a running game without losing its state.
+  *How:* a roster-free, content-driven tool `src/tools/BrainBreak.tsx` (`tool-brain-break`) following the
+  standard tools contract (§9): `tools-registry.json` entry (`icon: "bolt"`, added to `tools/iconMap.tsx`)
+  + `TOOLS_MAP` registration in `ToolPage.tsx`. Its 45-exercise pool is externalized to
+  `data/content/brain-break-content.json`, but — deliberately unlike game content (§11) — keyed by energy
+  **category (`energize`/`calm`), not age cohort**, because the teacher picks by the class state, not
+  grade (the tool has no age selector). Reuses the asset-free Web-Audio `Sfx` pattern, the state-gated
+  pause/resume countdown, ref-cleaned roulette flicker, and `canvas-confetti`. An optional `onClose` prop
+  makes it embeddable: `PlaylistPlayerPage` renders a fixed "⚡ הפגת בזק!" `Fab` that opens the tool in a
+  full-screen `Dialog` over the active game; the game stays mounted (portal sibling) so closing the modal
+  resumes it with state intact. Because tools auto-enroll into `lessonItems.ts`, the break is also usable
+  as a normal playlist step. No whats-new/taxonomy change.

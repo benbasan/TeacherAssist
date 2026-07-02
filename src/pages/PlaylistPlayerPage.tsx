@@ -11,13 +11,18 @@ import {
   ListItemButton,
   ListItemText,
   Chip,
+  Fab,
+  Dialog,
+  DialogContent,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import EmojiEventsRoundedIcon from '@mui/icons-material/EmojiEventsRounded';
 import SentimentDissatisfiedRoundedIcon from '@mui/icons-material/SentimentDissatisfiedRounded';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import confetti from 'canvas-confetti';
 import { useClassrooms } from '../context/ClassroomContext';
 import { resolveLessonItem } from '../data/lessonItems';
+import BrainBreak from '../tools/BrainBreak';
 
 /**
  * מרחב הכיתה — the Lesson Playlist Player. Runs a saved playlist as a seamless
@@ -30,6 +35,7 @@ export default function PlaylistPlayerPage() {
   const { playlistId } = useParams<{ playlistId: string }>();
   const { activeClassroom } = useClassrooms();
   const [index, setIndex] = useState(0);
+  const [breakOpen, setBreakOpen] = useState(false);
 
   const playlist = useMemo(
     () => (activeClassroom?.savedPlaylists ?? []).find((p) => p.id === playlistId) ?? null,
@@ -225,6 +231,35 @@ export default function PlaylistPlayerPage() {
           )}
         </Paper>
       </Box>
+
+      {/* ---- Emergency Brain Break: halt any activity, run a 60–90s break, resume ----
+          The active activity above stays mounted (the Dialog renders in a portal), so
+          the running game keeps its exact state while the break plays over it. */}
+      <Fab
+        variant="extended"
+        onClick={() => setBreakOpen(true)}
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 16, sm: 24 },
+          insetInlineEnd: { xs: 16, sm: 24 },
+          zIndex: 5,
+          fontWeight: 800,
+          color: '#fff',
+          background: 'linear-gradient(90deg, #ef5350 0%, #ff7043 100%)',
+          '&:hover': { background: 'linear-gradient(90deg, #e53935 0%, #f4511e 100%)' },
+        }}
+      >
+        <BoltRoundedIcon sx={{ mr: 1 }} />
+        ⚡ הפגת בזק!
+      </Fab>
+
+      <Dialog fullScreen open={breakOpen} onClose={() => setBreakOpen(false)}>
+        <DialogContent sx={{ bgcolor: 'background.default' }}>
+          <Container maxWidth="md" sx={{ py: { xs: 1, sm: 2 } }}>
+            <BrainBreak onClose={() => setBreakOpen(false)} />
+          </Container>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

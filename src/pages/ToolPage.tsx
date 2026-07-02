@@ -9,6 +9,7 @@ import NameWheel from '../tools/NameWheel';
 import TeamMaker from '../tools/TeamMaker';
 import MarbleJar from '../tools/MarbleJar';
 import ChoreBoard from '../tools/ChoreBoard';
+import BrainBreak from '../tools/BrainBreak';
 
 const tools = toolsRegistry as ClassroomTool[];
 
@@ -22,6 +23,7 @@ export const TOOLS_MAP: Record<string, ComponentType<{ toolId?: string }>> = {
   'tool-team-maker': TeamMaker,
   'tool-marble-jar': MarbleJar,
   'tool-chore-board': ChoreBoard,
+  'tool-brain-break': BrainBreak,
 };
 
 function NotFound({ message }: { message: string }) {

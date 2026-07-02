@@ -11,8 +11,16 @@ import {
   Divider,
   ToggleButton,
   ToggleButtonGroup,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import PlaylistPlayRoundedIcon from '@mui/icons-material/PlaylistPlayRounded';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import type { EducationalGame } from '../types/game.types';
 import type { ClassroomTool } from '../types/tool.types';
 import gamesRegistry from '../data/games-registry.json';
@@ -36,8 +44,12 @@ const TOOL_ACCENT = '#26a69a'; // teal — visually distinguishes utilities from
  */
 export default function ClassroomWorkspacePage() {
   const { activeClassroom } = useClassrooms();
+  const navigate = useNavigate();
   const [subject, setSubject] = useState<string>(ALL);
   const [cohort, setCohort] = useState<CohortKey | typeof ALL>(ALL);
+  const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
+
+  const savedPlaylists = activeClassroom?.savedPlaylists ?? [];
 
   // Subject options are derived from whatever games actually exist.
   const subjects = useMemo(() => Array.from(new Set(games.map((g) => g.subject))), []);
@@ -55,13 +67,29 @@ export default function ClassroomWorkspacePage() {
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 5 } }}>
       {/* ---- Header ---- */}
-      <Stack spacing={1} sx={{ mb: 4 }}>
-        <Typography variant="h2" color="primary.dark" sx={{ fontWeight: 800, fontSize: { xs: 36, sm: 52 } }}>
-          קטלוג המשחקים 🎲
-        </Typography>
-        <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 400, fontSize: { xs: 18, sm: 24 } }}>
-          בחרו משחק יומי שמתאים לכיתה שלכם — ותתחילו לשחק תוך שניות.
-        </Typography>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{ mb: 4, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}
+      >
+        <Stack spacing={1}>
+          <Typography variant="h2" color="primary.dark" sx={{ fontWeight: 800, fontSize: { xs: 36, sm: 52 } }}>
+            קטלוג המשחקים 🎲
+          </Typography>
+          <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 400, fontSize: { xs: 18, sm: 24 } }}>
+            בחרו משחק יומי שמתאים לכיתה שלכם — ותתחילו לשחק תוך שניות.
+          </Typography>
+        </Stack>
+        <Button
+          variant="contained"
+          size="large"
+          color="secondary"
+          startIcon={<PlaylistPlayRoundedIcon />}
+          onClick={() => setPlaylistDialogOpen(true)}
+          sx={{ fontWeight: 800, fontSize: { xs: 15, sm: 18 }, flexShrink: 0 }}
+        >
+          📅 טען מערך שיעור מוכן
+        </Button>
       </Stack>
 
       {/* ---- Filter toolbar ---- */}
@@ -235,6 +263,40 @@ export default function ClassroomWorkspacePage() {
           );
         })}
       </Box>
+
+      {/* ---- Saved-playlist launcher dialog ---- */}
+      <Dialog open={playlistDialogOpen} onClose={() => setPlaylistDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 800 }}>📅 מערכי שיעור מוכנים</DialogTitle>
+        <DialogContent>
+          {savedPlaylists.length === 0 ? (
+            <Stack spacing={2} sx={{ py: 2 }}>
+              <Typography color="text.secondary">
+                עדיין אין מערכי שיעור שמורים לכיתה זו. בנו מערך שיעור ב"מרחב המורה → אדריכל השיעור".
+              </Typography>
+            </Stack>
+          ) : (
+            <List>
+              {[...savedPlaylists].reverse().map((p) => (
+                <ListItemButton
+                  key={p.id}
+                  onClick={() => {
+                    setPlaylistDialogOpen(false);
+                    navigate(`/classroom/play/${p.id}`);
+                  }}
+                  sx={{ borderRadius: 12, mb: 1, border: '1px solid', borderColor: 'divider' }}
+                >
+                  <PlaylistPlayRoundedIcon sx={{ color: 'secondary.main', marginInlineEnd: 1.5 }} />
+                  <ListItemText
+                    primary={p.title}
+                    secondary={`${p.gameAndToolIds.length} פעילויות`}
+                    slotProps={{ primary: { sx: { fontWeight: 700 } } }}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }

@@ -34,7 +34,7 @@ const games = registry as EducationalGame[];
  * Registry Map: connects a game's `componentName` to its React component.
  * Every new game in `/src/games` must be registered here.
  */
-const REGISTRY_MAP: Record<string, ComponentType<{ gameId?: string }>> = {
+export const REGISTRY_MAP: Record<string, ComponentType<{ gameId?: string }>> = {
   ComplimentGamePack: ComplimentGamePack,
   MathCodebreaker: MathCodebreaker,
   SocialDilemmas: SocialDilemmas,

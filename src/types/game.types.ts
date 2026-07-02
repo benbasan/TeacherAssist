@@ -50,6 +50,20 @@ export interface WhatsappMessage {
   tone: string;
 }
 
+/**
+ * A saved lesson playlist (Session Builder → אדריכל השיעור): an ordered sequence
+ * of activities the teacher pre-builds at home and runs in class 1-click at a
+ * time. Each id is either a games-registry id OR a tools-registry id.
+ */
+export interface LessonPlaylist {
+  /** Stable unique id (crypto.randomUUID). */
+  id: string;
+  /** Teacher-given lesson name, e.g. "שיעור פתיחת שנה". */
+  title: string;
+  /** Ordered mix of games-registry ids and tools-registry ids. */
+  gameAndToolIds: string[];
+}
+
 /** Default chore roles seeded for a new class / guest board (Smart Chore Board tool). */
 export const DEFAULT_CHORES: string[] = [
   'תורן/נית לוח',
@@ -86,6 +100,8 @@ export interface Classroom {
   studentInsights?: Record<string, StudentInsight[]>;
   /** WhatsApp Generator tool: recent parent messages sent (capped to 10, cloud-persisted). */
   whatsappHistory?: WhatsappMessage[];
+  /** Session Builder tool: saved lesson playlists (capped to 20, cloud-persisted). */
+  savedPlaylists?: LessonPlaylist[];
 }
 
 /** A single entry on the "What's New" timeline. */

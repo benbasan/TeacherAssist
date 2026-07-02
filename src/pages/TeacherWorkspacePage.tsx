@@ -36,8 +36,10 @@ const TOOLS: OfficeTool[] = [
   },
   {
     title: 'אדריכל השיעור',
-    description: 'תכנון מהלך שיעור מובנה עם פתיחה, גוף וסיכום מותאמים לכיתה. בקרוב.',
+    description:
+      'בנו מבעוד מועד רצף של משחקים וכלים למערך שיעור שלם — ונגנו אותו בכיתה במעבר בלחיצה אחת בין פעילות לפעילות.',
     icon: ArchitectureRoundedIcon,
+    to: '/teacher-workspace/lesson-builder',
     accent: VIOLET,
   },
 ];

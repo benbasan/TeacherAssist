@@ -54,6 +54,7 @@ src/
 │   ├── tools-registry.json     # SOURCE OF TRUTH: Classroom Utilities (separate category; see §9)
 │   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries (games only)
 │   ├── taxonomy.ts             # subject/targetAge → Hebrew labels + icon/color (catalog visuals)
+│   ├── lessonItems.ts          # Playlist resolver: game/tool id → {title,icon,Component} (§12)
 │   └── content/                # Externalized game text pools, one per game (§11)
 │       ├── social-speed-dating-content.json # ClassroomSpeedDating: age-cohort prompt packs + wrap-ups
 │       ├── compliment-pack-content.json     # ComplimentGamePack: age-cohort solo + pair compliment prompts
@@ -107,12 +108,14 @@ src/
 │   └── ChoreBoard.tsx          # Tool 4: fair duty-roster board (cloud + guest fallback; §7, §9)
 ├── teacher-tools/              # מרחב המורה — private, SignedIn-only back-office tools (§10)
 │   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
-│   └── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
+│   ├── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
+│   └── LessonBuilder.tsx       # "אדריכל השיעור": build ordered game/tool playlists per class (§12)
 ├── pages/
 │   ├── HomePage.tsx            # Landing gateway at "/": split-screen → /classroom | /teacher-workspace (§3)
 │   ├── ClassroomWorkspacePage.tsx # מרחב הכיתה hub at /classroom: games catalog (subject + cohort ToggleButton filters) + STATIC utilities section (§3/§9)
-│   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map
-│   ├── ToolPage.tsx            # Resolves a tool by URL :toolId → renders via Tools Map (§9)
+│   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map (exports REGISTRY_MAP)
+│   ├── ToolPage.tsx            # Resolves a tool by URL :toolId → renders via Tools Map (exports TOOLS_MAP; §9)
+│   ├── PlaylistPlayerPage.tsx  # מרחב הכיתה playlist player at /classroom/play/:playlistId (§12)
 │   ├── DashboardPage.tsx       # Teacher workspace: create/edit/delete saved classrooms (SignedIn)
 │   ├── TeacherWorkspacePage.tsx # מרחב המורה dashboard: office-tool cards, dark corporate skin (§10)
 │   └── WhatsNewPage.tsx        # Timeline rendered from whats-new.json
@@ -121,7 +124,7 @@ src/
 │   ├── corporateTheme.ts       # Dark navy/slate theme for מרחב המורה (nested ThemeProvider; §10)
 │   └── rtlCache.ts             # Emotion cache for RTL CSS (key "muirtl")
 └── types/
-    ├── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom contracts
+    ├── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom, LessonPlaylist contracts
     └── tool.types.ts           # ClassroomTool contract (utilities; §9)
 ```
 
@@ -144,11 +147,13 @@ src/
               "/classroom"     → <RequireActiveClass><ClassroomWorkspacePage /></RequireActiveClass>  // games + static utilities (§9)
               "/game/:gameId"  → <RequireActiveClass><GamePage /></RequireActiveClass>
               "/tools/:toolId" → <RequireActiveClass><ToolPage /></RequireActiveClass>          // gated; dynamic tool resolution (§9)
+              "/classroom/play/:playlistId" → <RequireActiveClass><PlaylistPlayerPage /></RequireActiveClass>  // gated; lesson playlist player (§12)
               "/tools"         → <Navigate to="/classroom" replace />   // catalog merged into /classroom
               "/teacher-workspace" → <TeacherWorkspaceLayout/>   // ungated route, SignedIn-gated + dark corporateTheme inside (§10)
                   index               → <TeacherWorkspacePage/>     // office-tool dashboard
                   "student-insights"  → <StudentInsights/>          // private תיק תלמיד tool
                   "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
+                  "lesson-builder"    → <LessonBuilder/>            // Session Builder / אדריכל השיעור (§12)
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
               "*"              → <Navigate to="/" replace />   // unknown path → gateway
@@ -339,9 +344,12 @@ Type contracts in `src/types/game.types.ts`:
   fields `marblesCount: number` (0), `marblesTarget: number` (30), `marblesReward: string`
   ("צ'ופר כיתתי"), and the Chore Board fields `customChoresList: string[]` (`DEFAULT_CHORES`) +
   `currentChoreAssignments: Record<string, string[]>` (`{}`), and the Student Insights field
-  `studentInsights?: Record<string, StudentInsight[]>` (`{}`), and the WhatsApp Generator field
-  `whatsappHistory?: WhatsappMessage[]` (`[]`) — all cloud-persisted per-teacher via Clerk; see §7.
+  `studentInsights?: Record<string, StudentInsight[]>` (`{}`), the WhatsApp Generator field
+  `whatsappHistory?: WhatsappMessage[]` (`[]`), and the Session Builder field
+  `savedPlaylists?: LessonPlaylist[]` (`[]`) — all cloud-persisted per-teacher via Clerk; see §7.
   Re-exported from `ClassroomContext` for back-compat.
+- **`LessonPlaylist`** — `id`, `title`, `gameAndToolIds: string[]` (ordered mix of games-registry
+  and tools-registry ids; see §12).
 
 The registry stores compact keys for `subject` and `targetAge`. `src/data/taxonomy.ts` maps
 those to Hebrew labels and to the catalog's visual identity (`subjectMeta()` → `{ label, icon,
@@ -391,7 +399,7 @@ per-user cloud storage:
 
 - **Storage:** each teacher's classes live in `user.unsafeMetadata.classrooms` — an array of
   `Classroom { id, name, students: string[], playedGames: string[], marblesCount, marblesTarget,
-  marblesReward, customChoresList, currentChoreAssignments, studentInsights, whatsappHistory }` (type in `src/types/game.types.ts`,
+  marblesReward, customChoresList, currentChoreAssignments, studentInsights, whatsappHistory, savedPlaylists }` (type in `src/types/game.types.ts`,
   re-exported from `ClassroomContext`). `playedGames` holds the ids of games this class has finished
   (catalog history badges, §5); the three `marbles*` fields hold the **Marble Jar** tool's per-class
   state and the two `chore*` fields hold the **Smart Chore Board** tool's roles + current assignments
@@ -403,7 +411,8 @@ per-user cloud storage:
   Legacy classrooms are **normalized on read** in the
   `classrooms` `useMemo`: `playedGames` → `[]`, `marblesCount` → `0`, `marblesTarget` → `30`,
   `marblesReward` → `"צ'ופר כיתתי"`, `customChoresList` → `DEFAULT_CHORES`,
-  `currentChoreAssignments` → `{}`, `studentInsights` → `{}`, `whatsappHistory` → `[]`.
+  `currentChoreAssignments` → `{}`, `studentInsights` → `{}`, `whatsappHistory` → `[]`,
+  `savedPlaylists` → `[]`.
 - **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
   place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
   (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
@@ -422,7 +431,9 @@ per-user cloud storage:
   caps the student's array to the most recent **15** for the ~8KB metadata limit) and
   `deleteStudentInsight(classId, studentName, insightId)`. The WhatsApp Generator adds
   `addWhatsappToHistory(classId, text, tone)` (appends `{id, date, text, tone}`, capped to the most
-  recent **10**) and `deleteWhatsappFromHistory(classId, messageId)`.
+  recent **10**) and `deleteWhatsappFromHistory(classId, messageId)`. The Session Builder adds
+  `createPlaylist(classId, title, itemIds)` (appends `{id, title, gameAndToolIds}`, capped to the most
+  recent **20**) and `deletePlaylist(classId, playlistId)`.
 - **Session state (NOT persisted):** the same context also holds in-memory `activeClassroomId` and
   `absentStudents`, with `setActiveClassroom(id)` (clearing also resets attendance) and
   `toggleStudentAttendance(name)`. These are deliberately **not** written to Clerk, so every app
@@ -577,9 +588,11 @@ preview**. "שגר ישירות לוואטסאפ" opens the `wa.me` deep link **
 color-coded tone `Chip`), each with "העתק מחדש" (`navigator.clipboard` + `Snackbar`) and "מחק"
 (`deleteWhatsappFromHistory`).
 
+**Third tool — `LessonBuilder.tsx` ("אדריכל השיעור"):** the Session Builder — see §12.
+
 **Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
-`/teacher-workspace`, and add a card to `TeacherWorkspacePage`. (One "בקרוב" placeholder card remains —
-"אדריכל השיעור" — marking the roadmap.)
+`/teacher-workspace`, and add a card to `TeacherWorkspacePage` (give it a `to` — the card auto-enables
+when `to` is present, and shows a "בקרוב" chip otherwise).
 
 ---
 
@@ -805,6 +818,49 @@ For input-driven games with no gameplay pool, externalize the **example/placehol
 age-tiered inspiration bank instead of skipping. For real-time loops, add `ageGroup` to the loop's
 `useEffect` deps. Requires `resolveJsonModule` (already enabled for the registry imports) — no
 build-config change.
+
+---
+
+## 12. Lesson Playlists / Session Builder (אדריכל השיעור)
+
+A **cross-environment** feature spanning both skins: the teacher **builds** an ordered sequence of
+activities in the private מרחב המורה back-office, then **plays** it seamlessly in class from the
+מרחב הכיתה smartboard surface — advancing between activities with a single top-bar click, never
+returning to the catalog mid-lesson.
+
+**Data model.** A playlist is a `LessonPlaylist { id, title, gameAndToolIds: string[] }`
+(`src/types/game.types.ts`); `gameAndToolIds` is an **ordered mix of games-registry ids AND
+tools-registry ids** (a playlist can interleave games and utilities). Playlists live per-class in
+`Classroom.savedPlaylists`, Clerk-persisted like every other class field (§7) — no localStorage, no
+new persistence layer. Written via `createPlaylist` / `deletePlaylist` (capped to 20/class).
+
+**Shared resolver (`src/data/lessonItems.ts`).** `resolveLessonItem(id)` bridges an id to
+`{ kind: 'game'|'tool', title, description, emoji|iconName, color, Component }` by looking it up in
+`games-registry.json` (→ `REGISTRY_MAP[componentName]`) first, else `tools-registry.json` (→
+`TOOLS_MAP[id]`), else `null`. It **reuses the exact maps** the single-activity pages use — hence
+`REGISTRY_MAP` (`GamePage.tsx`) and `TOOLS_MAP` (`ToolPage.tsx`) are now **exported**.
+`ALL_LESSON_ITEMS` (all games then all tools) is the builder's "available activities" catalog.
+
+**Builder — `src/teacher-tools/LessonBuilder.tsx`** (dark corporate skin, SignedIn-gated by the
+layout). Uses the same **local, session-decoupled class picker** as `StudentInsights` (seeds from
+`activeClassroomId`, never calls `setActiveClassroom`, so building a lesson at home doesn't disturb a
+live session). A name `TextField` + a two-column grid: right = `ALL_LESSON_ITEMS` with
+"הוסף לשיעור ➕" (duplicates allowed); left = the ordered queue with ↑/↓ reorder + delete. Saves via
+`createPlaylist`; an archive below lists saved playlists (item chips + delete).
+
+**Player — `src/pages/PlaylistPlayerPage.tsx`** at `/classroom/play/:playlistId` (classroom pastel
+skin, gated by `RequireActiveClass` like the rest of `/classroom`). Finds the playlist in
+`activeClassroom.savedPlaylists` (friendly fallback for guest/stale ids). A sticky gradient **top bar**
+(title · `פעילות N מתוך M` · giant "עבור לפעילות הבאה בשיעור ➡️" button) drives an `index` state; a
+20%/80% split renders a **sidebar tracker** (✅ done / 🎯 current / ⏳ upcoming, click to jump) beside
+the **active activity**, which mounts the resolved component **keyed on `index`** (`gameId` for games /
+`toolId` for tools) so each transition fully remounts fresh state. Past the last item → a celebratory
+"שיעור מושלם! כל הכבוד כיתה!" summary (`canvas-confetti`) + replay/back buttons. *Caveat:* a few games
+have an internal `navigate('/')`; tapping it mid-lesson exits the player — acceptable for v1.
+
+**Entry points.** `TeacherWorkspacePage` — the formerly-"בקרוב" **אדריכל השיעור** card now links to
+`/teacher-workspace/lesson-builder`. `ClassroomWorkspacePage` — a header **"📅 טען מערך שיעור מוכן"**
+button opens a `Dialog` of the active class's `savedPlaylists`; selecting one navigates to the player.
 
 ---
 
@@ -1387,3 +1443,18 @@ Append a dated entry here for every significant technical decision.
   StepByStepReflection) now targets `/classroom`; the Navbar replaced the catalog+tools links with one
   "ללוח החכם (מרחב הכיתה)" link + a SignedIn-only amber "💼 מרחב המורה (פרטי)" lock link. No
   registry/whats-new/taxonomy-data changes.
+- **2026-07-02 — Lesson Playlists / Session Builder (אדריכל השיעור).**
+  *Why:* teachers ran games/tools one at a time, returning to the catalog between each — friction
+  mid-lesson. A pre-built, 1-click-advance playlist lets a lesson flow seamlessly on the smartboard.
+  *How:* a `LessonPlaylist { id, title, gameAndToolIds }` on `Classroom.savedPlaylists`, Clerk-persisted
+  like every other field via new `createPlaylist`/`deletePlaylist` (capped 20/class) — **Clerk-only, no** 
+  **localStorage** (chosen for architectural consistency; guests simply see a fallback). A shared
+  `src/data/lessonItems.ts` resolver bridges a mixed game/tool id → display meta + component, **reusing**
+  the now-exported `REGISTRY_MAP` (`GamePage`) and `TOOLS_MAP` (`ToolPage`) rather than duplicating the
+  import list. Builder (`teacher-tools/LessonBuilder.tsx`, dark skin) uses the **local session-decoupled**
+  class picker (like `StudentInsights`) so home-planning never disturbs a live session. Player
+  (`pages/PlaylistPlayerPage.tsx` at `/classroom/play/:playlistId`, pastel skin, `RequireActiveClass`)
+  drives an `index` state from a top-bar "next" button and **remounts each activity via `key={index}`**
+  for clean fresh state; a `canvas-confetti` completion summary closes the lesson. Entry points: the
+  formerly-"בקרוב" `TeacherWorkspacePage` "אדריכל השיעור" card (now linked) + a "📅 טען מערך שיעור מוכן"
+  dialog on `ClassroomWorkspacePage`. No registry/whats-new/taxonomy-data changes.

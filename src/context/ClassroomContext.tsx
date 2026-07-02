@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import type { Classroom, InsightType } from '../types/game.types';
+import type { Classroom, InsightType, LessonPlaylist } from '../types/game.types';
 import { DEFAULT_CHORES } from '../types/game.types';
 
 /** Max insights kept per student — guards Clerk's ~8KB `unsafeMetadata` limit. */
@@ -10,9 +10,12 @@ const MAX_INSIGHTS_PER_STUDENT = 15;
 /** Max archived parent messages kept per class — same 8KB metadata guard. */
 const MAX_WHATSAPP_HISTORY = 10;
 
+/** Max saved lesson playlists kept per class — same 8KB metadata guard. */
+const MAX_PLAYLISTS = 20;
+
 // Re-exported for backward compatibility: `Classroom` now lives with the other
 // domain types in `src/types/game.types.ts`.
-export type { Classroom };
+export type { Classroom, LessonPlaylist };
 
 interface ClassroomContextValue {
   /** The teacher's saved classes (empty when signed out / not yet loaded). */
@@ -79,6 +82,12 @@ interface ClassroomContextValue {
   addWhatsappToHistory: (classId: string, text: string, tone: string) => Promise<void>;
   /** Remove a single archived message by id. */
   deleteWhatsappFromHistory: (classId: string, messageId: string) => Promise<void>;
+
+  // --- Session Builder tool (lesson playlists; cloud-persisted per class) ----
+  /** Save a new lesson playlist (ordered game/tool ids; capped to the most recent 20). */
+  createPlaylist: (classId: string, title: string, itemIds: string[]) => Promise<void>;
+  /** Remove a saved lesson playlist by id. */
+  deletePlaylist: (classId: string, playlistId: string) => Promise<void>;
 }
 
 const ClassroomContext = createContext<ClassroomContextValue | null>(null);
@@ -111,6 +120,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       currentChoreAssignments: c.currentChoreAssignments ?? {},
       studentInsights: c.studentInsights ?? {},
       whatsappHistory: c.whatsappHistory ?? [],
+      savedPlaylists: c.savedPlaylists ?? [],
     }));
   }, [user?.unsafeMetadata]);
 
@@ -147,6 +157,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         currentChoreAssignments: {},
         studentInsights: {},
         whatsappHistory: [],
+        savedPlaylists: [],
       };
       await persist([...classrooms, classroom]);
     },
@@ -353,6 +364,39 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [classrooms, persist],
   );
 
+  const createPlaylist = useCallback(
+    async (classId: string, title: string, itemIds: string[]) => {
+      const playlist: LessonPlaylist = {
+        id: crypto.randomUUID(),
+        title,
+        gameAndToolIds: itemIds,
+      };
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const existing = c.savedPlaylists ?? [];
+          // Keep only the most recent 20 to stay under Clerk's metadata limit.
+          const next = [...existing, playlist].slice(-MAX_PLAYLISTS);
+          return { ...c, savedPlaylists: next };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const deletePlaylist = useCallback(
+    async (classId: string, playlistId: string) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId
+            ? { ...c, savedPlaylists: (c.savedPlaylists ?? []).filter((p) => p.id !== playlistId) }
+            : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
   const value = useMemo<ClassroomContextValue>(
     () => ({
       classrooms,
@@ -377,6 +421,8 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       deleteStudentInsight,
       addWhatsappToHistory,
       deleteWhatsappFromHistory,
+      createPlaylist,
+      deletePlaylist,
     }),
     [
       classrooms,
@@ -401,6 +447,8 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       deleteStudentInsight,
       addWhatsappToHistory,
       deleteWhatsappFromHistory,
+      createPlaylist,
+      deletePlaylist,
     ],
   );
 

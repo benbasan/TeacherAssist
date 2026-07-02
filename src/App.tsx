@@ -11,12 +11,14 @@ import HomePage from './pages/HomePage';
 import ClassroomWorkspacePage from './pages/ClassroomWorkspacePage';
 import GamePage from './pages/GamePage';
 import ToolPage from './pages/ToolPage';
+import PlaylistPlayerPage from './pages/PlaylistPlayerPage';
 import DashboardPage from './pages/DashboardPage';
 import WhatsNewPage from './pages/WhatsNewPage';
 import TeacherWorkspaceLayout from './components/layout/TeacherWorkspaceLayout';
 import TeacherWorkspacePage from './pages/TeacherWorkspacePage';
 import StudentInsights from './teacher-tools/StudentInsights';
 import CommunicationGenerator from './teacher-tools/CommunicationGenerator';
+import LessonBuilder from './teacher-tools/LessonBuilder';
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -60,6 +62,16 @@ export default function App() {
                       </RequireActiveClass>
                     }
                   />
+                  {/* Lesson Playlist Player — runs a saved playlist in class,
+                      gated like the rest of /classroom (§12). */}
+                  <Route
+                    path="/classroom/play/:playlistId"
+                    element={
+                      <RequireActiveClass>
+                        <PlaylistPlayerPage />
+                      </RequireActiveClass>
+                    }
+                  />
                   {/* The standalone tools catalog merged into /classroom. */}
                   <Route path="/tools" element={<Navigate to="/classroom" replace />} />
                   {/* Teacher's Private Workspace — ungated route, SignedIn-gated inside
@@ -68,6 +80,7 @@ export default function App() {
                     <Route index element={<TeacherWorkspacePage />} />
                     <Route path="student-insights" element={<StudentInsights />} />
                     <Route path="whatsapp-generator" element={<CommunicationGenerator />} />
+                    <Route path="lesson-builder" element={<LessonBuilder />} />
                   </Route>
                   {/* Ungated so a teacher with no classes can still reach the dashboard. */}
                   <Route path="/dashboard" element={<DashboardPage />} />

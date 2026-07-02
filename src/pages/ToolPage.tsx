@@ -17,7 +17,7 @@ const tools = toolsRegistry as ClassroomTool[];
  * `componentName` — the id doubles as the key). Register every new utility here.
  * See ARCHITECTURE.md §9.
  */
-const TOOLS_MAP: Record<string, ComponentType<{ toolId?: string }>> = {
+export const TOOLS_MAP: Record<string, ComponentType<{ toolId?: string }>> = {
   'tool-name-wheel': NameWheel,
   'tool-team-maker': TeamMaker,
   'tool-marble-jar': MarbleJar,

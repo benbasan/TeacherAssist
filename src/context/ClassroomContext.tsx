@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import type { Classroom, InsightType, LessonPlaylist } from '../types/game.types';
+import type {
+  Classroom,
+  InsightType,
+  LessonPlaylist,
+  SocialSurveyAnswers,
+  SocialSurveyLevel,
+} from '../types/game.types';
 import { DEFAULT_CHORES } from '../types/game.types';
 
 /** Max insights kept per student — guards Clerk's ~8KB `unsafeMetadata` limit. */
@@ -88,6 +94,18 @@ interface ClassroomContextValue {
   createPlaylist: (classId: string, title: string, itemIds: string[]) => Promise<void>;
   /** Remove a saved lesson playlist by id. */
   deletePlaylist: (classId: string, playlistId: string) => Promise<void>;
+
+  // --- Social Compass tool (sociometric survey; cloud-persisted per class) ---
+  /** Open a fresh survey: generate a 4-digit PIN, set the level, and clear prior data. */
+  startSocialSurvey: (classId: string, level: SocialSurveyLevel) => Promise<void>;
+  /** Append/overwrite a student's confidential 3 picks. */
+  submitStudentAnswers: (
+    classId: string,
+    studentName: string,
+    answers: SocialSurveyAnswers,
+  ) => Promise<void>;
+  /** Close the survey — locks further student entries (data retained for analysis). */
+  closeSocialSurvey: (classId: string) => Promise<void>;
 }
 
 const ClassroomContext = createContext<ClassroomContextValue | null>(null);
@@ -121,6 +139,10 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       studentInsights: c.studentInsights ?? {},
       whatsappHistory: c.whatsappHistory ?? [],
       savedPlaylists: c.savedPlaylists ?? [],
+      socialSurveyActive: c.socialSurveyActive ?? false,
+      socialSurveyPin: c.socialSurveyPin ?? '',
+      socialSurveyLevel: c.socialSurveyLevel ?? 'elementary',
+      socialSurveyData: c.socialSurveyData ?? {},
     }));
   }, [user?.unsafeMetadata]);
 
@@ -158,6 +180,10 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         studentInsights: {},
         whatsappHistory: [],
         savedPlaylists: [],
+        socialSurveyActive: false,
+        socialSurveyPin: '',
+        socialSurveyLevel: 'elementary',
+        socialSurveyData: {},
       };
       await persist([...classrooms, classroom]);
     },
@@ -397,6 +423,52 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [classrooms, persist],
   );
 
+  const startSocialSurvey = useCallback(
+    async (classId: string, level: SocialSurveyLevel) => {
+      // 4-digit PIN in [1000, 9999]. Math.random is fine in app runtime.
+      const pin = String(Math.floor(1000 + Math.random() * 9000));
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId
+            ? {
+                ...c,
+                socialSurveyActive: true,
+                socialSurveyPin: pin,
+                socialSurveyLevel: level,
+                socialSurveyData: {}, // a new survey always starts clean
+              }
+            : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const submitStudentAnswers = useCallback(
+    async (classId: string, studentName: string, answers: SocialSurveyAnswers) => {
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const data = c.socialSurveyData ?? {};
+          // Re-submits overwrite the same key, keeping one record per student.
+          return { ...c, socialSurveyData: { ...data, [studentName]: answers } };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
+  const closeSocialSurvey = useCallback(
+    async (classId: string) => {
+      await persist(
+        classrooms.map((c) =>
+          c.id === classId ? { ...c, socialSurveyActive: false } : c,
+        ),
+      );
+    },
+    [classrooms, persist],
+  );
+
   const value = useMemo<ClassroomContextValue>(
     () => ({
       classrooms,
@@ -423,6 +495,9 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       deleteWhatsappFromHistory,
       createPlaylist,
       deletePlaylist,
+      startSocialSurvey,
+      submitStudentAnswers,
+      closeSocialSurvey,
     }),
     [
       classrooms,
@@ -449,6 +524,9 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       deleteWhatsappFromHistory,
       createPlaylist,
       deletePlaylist,
+      startSocialSurvey,
+      submitStudentAnswers,
+      closeSocialSurvey,
     ],
   );
 

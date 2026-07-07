@@ -19,6 +19,8 @@ import TeacherWorkspacePage from './pages/TeacherWorkspacePage';
 import StudentInsights from './teacher-tools/StudentInsights';
 import CommunicationGenerator from './teacher-tools/CommunicationGenerator';
 import LessonBuilder from './teacher-tools/LessonBuilder';
+import SocialMapperDashboard from './teacher-tools/SocialMapperDashboard';
+import SocialSurveyStudentPage from './pages/SocialSurveyStudentPage';
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -31,6 +33,13 @@ export default function App() {
           <ClassroomProvider>
             <BrowserRouter>
               <Routes>
+                {/* Social Compass student KIOSK — full-screen, OUTSIDE AppLayout so
+                    no teacher navbar leaks to students; public (no gate), but relies
+                    on the teacher staying signed in on this device (§10). */}
+                <Route
+                  path="/classroom/social-survey/:classId"
+                  element={<SocialSurveyStudentPage />}
+                />
                 <Route element={<AppLayout />}>
                   {/* Landing gateway — split-screen routing to the two environments. */}
                   <Route path="/" element={<HomePage />} />
@@ -81,6 +90,7 @@ export default function App() {
                     <Route path="student-insights" element={<StudentInsights />} />
                     <Route path="whatsapp-generator" element={<CommunicationGenerator />} />
                     <Route path="lesson-builder" element={<LessonBuilder />} />
+                    <Route path="social-mapper" element={<SocialMapperDashboard />} />
                   </Route>
                   {/* Ungated so a teacher with no classes can still reach the dashboard. */}
                   <Route path="/dashboard" element={<DashboardPage />} />

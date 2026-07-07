@@ -38,6 +38,24 @@ export interface StudentInsight {
   note: string;
 }
 
+/**
+ * Age tier for the Social Compass (מצפן חברתי) sociometric survey. The teacher
+ * picks this when opening a survey (the app has no per-class grade field); it
+ * selects the age-appropriate question wording. See ARCHITECTURE.md §10.
+ */
+export type SocialSurveyLevel = 'elementary' | 'junior_high';
+
+/**
+ * One student's three sociometric picks (Social Compass). Each value is the
+ * name of a chosen classmate: q1 = space-mission/project partner,
+ * q2 = emotional-support anchor, q3 = seating/trip buddy.
+ */
+export interface SocialSurveyAnswers {
+  q1: string;
+  q2: string;
+  q3: string;
+}
+
 /** A single archived parent message (Teacher's Private Workspace → WhatsApp Generator). */
 export interface WhatsappMessage {
   /** Stable unique id (crypto.randomUUID). */
@@ -102,6 +120,14 @@ export interface Classroom {
   whatsappHistory?: WhatsappMessage[];
   /** Session Builder tool: saved lesson playlists (capped to 20, cloud-persisted). */
   savedPlaylists?: LessonPlaylist[];
+  /** Social Compass tool: is the sociometric survey open for student entries (default false). */
+  socialSurveyActive?: boolean;
+  /** Social Compass tool: 4-digit entry PIN shown on the board (default ''). */
+  socialSurveyPin?: string;
+  /** Social Compass tool: question tier the teacher chose on open (default 'elementary'). */
+  socialSurveyLevel?: SocialSurveyLevel;
+  /** Social Compass tool: submitter student name → their 3 confidential picks (default {}). */
+  socialSurveyData?: Record<string, SocialSurveyAnswers>;
 }
 
 /** A single entry on the "What's New" timeline. */

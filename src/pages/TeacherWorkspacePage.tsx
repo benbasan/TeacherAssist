@@ -2,6 +2,7 @@ import { Box, Card, CardActionArea, CardContent, Chip, Stack, Typography } from 
 import FolderSharedRoundedIcon from '@mui/icons-material/FolderSharedRounded';
 import ChatRoundedIcon from '@mui/icons-material/ChatRounded';
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
+import ExploreRoundedIcon from '@mui/icons-material/ExploreRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -9,6 +10,7 @@ import { Link as RouterLink } from 'react-router-dom';
 const INDIGO = '#7986cb';
 const TEAL = '#4db6ac';
 const VIOLET = '#9575cd';
+const ROSE = '#e57373';
 
 interface OfficeTool {
   title: string;
@@ -41,6 +43,14 @@ const TOOLS: OfficeTool[] = [
     icon: ArchitectureRoundedIcon,
     to: '/teacher-workspace/lesson-builder',
     accent: VIOLET,
+  },
+  {
+    title: 'מצפן חברתי: סוציומטריה שקטה',
+    description:
+      'סקר חברתי חסוי לתלמידים ההופך למפת קשרים אינטראקטיבית — מזהה ילדים שקופים בסיכון לבדידות, קליקות סגורות, ומציע תוכנית עבודה לחיזוק האקלים הכיתתי.',
+    icon: ExploreRoundedIcon,
+    to: '/teacher-workspace/social-mapper',
+    accent: ROSE,
   },
 ];
 

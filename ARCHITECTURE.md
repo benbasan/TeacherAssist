@@ -70,6 +70,7 @@ src/
 │       ├── social-rumor-express-content.json  # RumorExpress: age-cohort story tiers (stories+facts) + reflection cards
 │       ├── sentence-detectives-content.json   # SentenceDetectives: 2 elementary cohorts of scrambled-sentence pools
 │       ├── silent-ninja-content.json          # SilentNinja: age-cohort movement-command pools
+│       ├── social-mapper-content.json          # SocialMapper tool: 2-tier (elementary/junior_high) 3-question sociometric instrument — NOT the 40-item age-cohort schema (§10)
 │       ├── social-dilemmas-content.json       # SocialDilemmas: age-cohort SEL topics → dilemmas → choices/consequences/questions
 │       ├── spot-the-glitch-content.json       # SpotTheGlitch: age-cohort language-error topics (grammar/spelling/idioms)
 │       ├── social-reflection-walk-content.json # StepByStepReflection: age-cohort SEL forward/backward statements + debrief cards
@@ -111,13 +112,15 @@ src/
 ├── teacher-tools/              # מרחב המורה — private, SignedIn-only back-office tools (§10)
 │   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
 │   ├── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
-│   └── LessonBuilder.tsx       # "אדריכל השיעור": build ordered game/tool playlists per class (§12)
+│   ├── LessonBuilder.tsx       # "אדריכל השיעור": build ordered game/tool playlists per class (§12)
+│   └── SocialMapperDashboard.tsx # "מצפן חברתי": sociometric analytics — network map + climate alerts + matchmaker (§10)
 ├── pages/
 │   ├── HomePage.tsx            # Landing gateway at "/": split-screen → /classroom | /teacher-workspace (§3)
 │   ├── ClassroomWorkspacePage.tsx # מרחב הכיתה hub at /classroom: games catalog (subject + cohort ToggleButton filters) + STATIC utilities section (§3/§9)
 │   ├── GamePage.tsx            # Resolves a game by URL param → renders via Registry Map (exports REGISTRY_MAP)
 │   ├── ToolPage.tsx            # Resolves a tool by URL :toolId → renders via Tools Map (exports TOOLS_MAP; §9)
 │   ├── PlaylistPlayerPage.tsx  # מרחב הכיתה playlist player at /classroom/play/:playlistId (§12)
+│   ├── SocialSurveyStudentPage.tsx # Social Compass student KIOSK at /classroom/social-survey/:classId — full-screen, OUTSIDE AppLayout (§10)
 │   ├── DashboardPage.tsx       # Teacher workspace: create/edit/delete saved classrooms (SignedIn)
 │   ├── TeacherWorkspacePage.tsx # מרחב המורה dashboard: office-tool cards, dark corporate skin (§10)
 │   └── WhatsNewPage.tsx        # Timeline rendered from whats-new.json
@@ -144,6 +147,7 @@ src/
       <ClassroomProvider>               // classroom + session state, inside Clerk so it can read useUser() (§8)
         <BrowserRouter>
           <Routes>
+            "/classroom/social-survey/:classId" → <SocialSurveyStudentPage />  // full-screen student KIOSK, OUTSIDE AppLayout, ungated (§10)
             <Route element={<AppLayout />}>      // Navbar + AttendanceDrawer + <Outlet/>
               "/"              → <HomePage />     // split-screen landing gateway (ungated)
               "/classroom"     → <RequireActiveClass><ClassroomWorkspacePage /></RequireActiveClass>  // games + static utilities (§9)
@@ -156,6 +160,7 @@ src/
                   "student-insights"  → <StudentInsights/>          // private תיק תלמיד tool
                   "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
                   "lesson-builder"    → <LessonBuilder/>            // Session Builder / אדריכל השיעור (§12)
+                  "social-mapper"     → <SocialMapperDashboard/>    // Social Compass sociometric analytics (§10)
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
               "*"              → <Navigate to="/" replace />   // unknown path → gateway
@@ -347,8 +352,11 @@ Type contracts in `src/types/game.types.ts`:
   ("צ'ופר כיתתי"), and the Chore Board fields `customChoresList: string[]` (`DEFAULT_CHORES`) +
   `currentChoreAssignments: Record<string, string[]>` (`{}`), and the Student Insights field
   `studentInsights?: Record<string, StudentInsight[]>` (`{}`), the WhatsApp Generator field
-  `whatsappHistory?: WhatsappMessage[]` (`[]`), and the Session Builder field
-  `savedPlaylists?: LessonPlaylist[]` (`[]`) — all cloud-persisted per-teacher via Clerk; see §7.
+  `whatsappHistory?: WhatsappMessage[]` (`[]`), the Session Builder field
+  `savedPlaylists?: LessonPlaylist[]` (`[]`), and the Social Compass fields
+  `socialSurveyActive?: boolean` (`false`), `socialSurveyPin?: string` (`''`),
+  `socialSurveyLevel?: SocialSurveyLevel` (`'elementary'`) + `socialSurveyData?:
+  Record<string, SocialSurveyAnswers>` (`{}`) — all cloud-persisted per-teacher via Clerk; see §7.
   Re-exported from `ClassroomContext` for back-compat.
 - **`LessonPlaylist`** — `id`, `title`, `gameAndToolIds: string[]` (ordered mix of games-registry
   and tools-registry ids; see §12).
@@ -414,7 +422,8 @@ per-user cloud storage:
   `classrooms` `useMemo`: `playedGames` → `[]`, `marblesCount` → `0`, `marblesTarget` → `30`,
   `marblesReward` → `"צ'ופר כיתתי"`, `customChoresList` → `DEFAULT_CHORES`,
   `currentChoreAssignments` → `{}`, `studentInsights` → `{}`, `whatsappHistory` → `[]`,
-  `savedPlaylists` → `[]`.
+  `savedPlaylists` → `[]`, `socialSurveyActive` → `false`, `socialSurveyPin` → `''`,
+  `socialSurveyLevel` → `'elementary'`, `socialSurveyData` → `{}`.
 - **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
   place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
   (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
@@ -435,7 +444,11 @@ per-user cloud storage:
   `addWhatsappToHistory(classId, text, tone)` (appends `{id, date, text, tone}`, capped to the most
   recent **10**) and `deleteWhatsappFromHistory(classId, messageId)`. The Session Builder adds
   `createPlaylist(classId, title, itemIds)` (appends `{id, title, gameAndToolIds}`, capped to the most
-  recent **20**) and `deletePlaylist(classId, playlistId)`.
+  recent **20**) and `deletePlaylist(classId, playlistId)`. The Social Compass (§10) adds three more:
+  `startSocialSurvey(classId, level)` (generates a 4-digit PIN, sets `socialSurveyActive`/
+  `socialSurveyLevel`, and **clears** prior `socialSurveyData`), `submitStudentAnswers(classId,
+  studentName, answers)` (merges/overwrites one record per student), and `closeSocialSurvey(classId)`
+  (sets `socialSurveyActive` false, retaining the data for analysis).
 - **Session state (NOT persisted):** the same context also holds in-memory `activeClassroomId` and
   `absentStudents`, with `setActiveClassroom(id)` (clearing also resets attendance) and
   `toggleStudentAttendance(name)`. These are deliberately **not** written to Clerk, so every app
@@ -607,6 +620,35 @@ color-coded tone `Chip`), each with "העתק מחדש" (`navigator.clipboard` +
 (`deleteWhatsappFromHistory`).
 
 **Third tool — `LessonBuilder.tsx` ("אדריכל השיעור"):** the Session Builder — see §12.
+
+**Fourth tool — Social Compass ("מצפן חברתי: סוציומטריה שקטה"), the first tool SPLIT across both
+workspaces.** A silent sociometric survey that detects loneliness/isolation. It has two surfaces:
+- **Collection (מרחב הכיתה):** `src/pages/SocialSurveyStudentPage.tsx` at
+  `/classroom/social-survey/:classId` — a **full-screen kiosk rendered OUTSIDE `AppLayout`** (no
+  teacher navbar leaks to students) using the playful `educationalTheme`. The teacher's signed-in device
+  is passed student to student ("close the tab, rotate to the next friend"). Local `stage` machine
+  (`login → survey → done`): pick your name from the roster + enter the board PIN (validated against
+  `socialSurveyPin`; names already in `socialSurveyData` are disabled) → three `Select`s (Q1 space-
+  mission partner / Q2 emotional anchor / Q3 seating buddy), each listing classmates **minus the voter**
+  → `submitStudentAnswers` → confidential thank-you. Because storage IS the teacher's Clerk
+  `unsafeMetadata`, the kiosk only works while the teacher stays **signed in** on that device (same
+  constraint as the MarbleJar/ChoreBoard cloud tools, §7) — the route is "public" only in that it's not
+  behind the `SignedIn`/`RequireActiveClass` gate. Questions are externalized to
+  `data/content/social-mapper-content.json`, keyed by two teacher-selectable tiers
+  (`elementary`/`junior_high`).
+- **Analytics (מרחב המורה):** `src/teacher-tools/SocialMapperDashboard.tsx` at
+  `/teacher-workspace/social-mapper` — dark corporate skin, `SignedIn`-gated, **local session-decoupled**
+  class picker (like `StudentInsights`, never calls `setActiveClassroom`). Top bar opens a survey (picks
+  the level, generates the PIN, shows a live `submitted/total` counter + "open student station" button)
+  and locks it. Once **closed with data**, a `useMemo` analytics engine computes: `choiceCount` (across
+  all 3 questions), `adjacency`, `mutualPairs`, **transparent** (0 choices received), **oneDirectional**
+  (voted but no mutual bond), and **cliques** (connected components of the mutual-edge graph of size 3–4
+  that vote ≥75% internally and draw ≤1 external vote — a heuristic). Renders a dependency-free **SVG
+  network map** (nodes on a ring, radius ∝ choiceCount, solid-teal mutual vs dotted-gray single edges,
+  click-a-node-to-highlight-its-network) beside three color-coded climate-alert sections, then a
+  **matchmaker** action plan pairing each transparent/isolated student with the highest-scoring available
+  Q2 "emotional anchor" (round-robin). **Not** a `/tools` utility or catalog game — no
+  registry/whats-new entries.
 
 **Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
 `/teacher-workspace`, and add a card to `TeacherWorkspacePage` (give it a `to` — the card auto-enables
@@ -1496,3 +1538,30 @@ Append a dated entry here for every significant technical decision.
   full-screen `Dialog` over the active game; the game stays mounted (portal sibling) so closing the modal
   resumes it with state intact. Because tools auto-enroll into `lessonItems.ts`, the break is also usable
   as a normal playlist step. No whats-new/taxonomy change.
+- **2026-07-07 — Classroom Tool #6: Social Compass (מצפן חברתי, `tool-social-mapper`) — the first tool
+  split across both workspaces.**
+  *Why:* teachers need a quiet, non-judgmental way to surface social isolation/loneliness. That splits
+  cleanly along the app's existing seam (§3/§10): collection belongs on the student smartboard surface,
+  but the relational analytics are sensitive and must never be projected. *How:* four survey fields on
+  `Classroom` (`socialSurveyActive`/`socialSurveyPin`/`socialSurveyLevel`/`socialSurveyData`),
+  Clerk-persisted like every other field via three new context actions
+  (`startSocialSurvey`/`submitStudentAnswers`/`closeSocialSurvey`, §7). Student kiosk
+  (`pages/SocialSurveyStudentPage.tsx`) + private analytics dashboard
+  (`teacher-tools/SocialMapperDashboard.tsx`); surfaced only via a `TeacherWorkspacePage` card + two
+  routes — no games/tools/whats-new registry entries.
+  *Key choices:*
+  (1) **Kiosk single-device / Clerk model** — storage is the teacher's own `unsafeMetadata`, so the
+  "public" student route only functions while the teacher stays signed in on the passed-around device;
+  anonymous phones can't participate (consistent with the cloud tools, §7). The kiosk renders **outside
+  `AppLayout`** so no teacher navbar/sign-out leaks to students.
+  (2) **Added `socialSurveyLevel`** (beyond the 3 fields in the brief) — the app has no per-class grade
+  field, so the teacher picks Elementary/Junior-High when opening the survey; most reliable, minimal.
+  (3) **SVG network map, not a graph package** — no external dependency needed; a ring layout with
+  polar coordinates, choiceCount-scaled node radii, and click-to-highlight covers the brief without a
+  new package.
+  (4) **Fixed-3-question instrument, NOT the §11 40-item rule** — sociometry is a fixed 3-question
+  structure per level, so the games' "40 items across cohorts" density rule does not apply; content is
+  still externalized (`data/content/social-mapper-content.json`, 2 tiers) so it stays reviewable/
+  translatable as plain data.
+  (5) **Clique detection is a documented heuristic** — connected components of the mutual-edge graph,
+  size 3–4, voting ≥75% internally with ≤1 incoming external vote.

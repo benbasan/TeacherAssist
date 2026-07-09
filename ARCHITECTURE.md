@@ -646,9 +646,15 @@ workspaces.** A silent sociometric survey that detects loneliness/isolation. It 
   that vote ≥75% internally and draw ≤1 external vote — a heuristic). Renders a dependency-free **SVG
   network map** (nodes on a ring, radius ∝ choiceCount, solid-teal mutual vs dotted-gray single edges,
   click-a-node-to-highlight-its-network) beside three color-coded climate-alert sections, then a
-  **matchmaker** action plan pairing each transparent/isolated student with the highest-scoring available
-  Q2 "emotional anchor" (round-robin). **Not** a `/tools` utility or catalog game — no
-  registry/whats-new entries.
+  **clinical-pedagogical intervention panel** ("🎯 תוכנית התערבות ואקלים כיתתי מוצעת") driven by
+  `buildInterventions`, which reads per-question vote matrices (`q1Count`/`q2Count`/`q3Count`) to emit
+  three profile-specific strategies plus an always-on discretion note: **(a) Bridge-Peer** — each
+  transparent child paired with a *moderate-status, high-Q2* peer (deliberately **excluding** the
+  hyper-popular top third, `choiceCount ≤ 0.66·max`, round-robin); **(b) Clique Dilution** — a tactical
+  split recommendation per detected clique; **(c) Hidden Strength** — students recognized *only* on the
+  competence axis (`q1≥1 ∧ q2=0 ∧ q3=0`) get a leadership-role recommendation; and a fixed clinical
+  "הערת מחנך" reminding the teacher to apply everything indirectly and never share the map with children/
+  parents. **Not** a `/tools` utility or catalog game — no registry/whats-new entries.
 
 **Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
 `/teacher-workspace`, and add a card to `TeacherWorkspacePage` (give it a `to` — the card auto-enables
@@ -1565,3 +1571,21 @@ Append a dated entry here for every significant technical decision.
   translatable as plain data.
   (5) **Clique detection is a documented heuristic** — connected components of the mutual-edge graph,
   size 3–4, voting ≥75% internally with ≤1 incoming external vote.
+- **2026-07-09 — Social Compass: deepened the action plan into a clinical intervention engine
+  (`buildInterventions`).**
+  *Why:* the launch matchmaker emitted one generic "pair with the highest-Q2 anchor" string per isolated
+  child — pedagogically shallow and, worse, prone to pairing a lonely child with the class star (which
+  backfires). *How:* `computeAnalytics` now also tallies per-question incoming votes
+  (`q1Count`/`q2Count`/`q3Count`), and `buildInterventions` derives three profile-specific strategies
+  rendered under "🎯 תוכנית התערבות ואקלים כיתתי מוצעת", each with tailored Hebrew copy (empty groups
+  hidden), plus an always-on clinical discretion note.
+  *Key clinical choices:*
+  (1) **Bridge-Peer avoids the hyper-popular** — candidates must be moderate status
+  (`choiceCount ≤ 0.66·max`, the `HYPER_FRACTION` heuristic) AND a genuine emotional anchor
+  (`q2Count ≥ 1`), ranked by Q2 desc then lower popularity; graceful fallback to any anchor, then to a
+  "no clear anchor" variant. This inverts the old "highest score wins" logic.
+  (2) **Hidden Strength** targets the *competence-only* profile (`q1≥1 ∧ q2=0 ∧ q3=0`) — recognized for
+  ability but socially overlooked in leisure — recommending a formal key role to convert professional
+  regard into social interaction.
+  (3) **Clique Dilution** reuses the existing `cliques` detection, naming members and proposing an
+  interdependent split. Isolated to `SocialMapperDashboard.tsx`; no context/type/route/content change.

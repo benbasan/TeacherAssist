@@ -9,6 +9,7 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Divider,
   ToggleButton,
   ToggleButtonGroup,
   Alert,
@@ -43,7 +44,9 @@ const SLATE = '#94a3b8';
 interface Analytics {
   submitterCount: number;
   choiceCount: Record<string, number>;
-  q2Count: Record<string, number>;
+  q1Count: Record<string, number>; // votes on Q1 (competence / space-mission)
+  q2Count: Record<string, number>; // votes on Q2 (emotional-support anchor)
+  q3Count: Record<string, number>; // votes on Q3 (friendship / bus-leisure seat)
   adjacency: Record<string, string[]>; // chooser → unique chosen (in roster)
   mutualPairs: [string, string][];
   transparent: string[]; // received 0 choices
@@ -63,11 +66,15 @@ function computeAnalytics(classroom: Classroom): Analytics {
   const submitters = Object.keys(data).filter((n) => roster.has(n));
 
   const choiceCount: Record<string, number> = {};
+  const q1Count: Record<string, number> = {};
   const q2Count: Record<string, number> = {};
+  const q3Count: Record<string, number> = {};
   const adjacency: Record<string, string[]> = {};
   students.forEach((s) => {
     choiceCount[s] = 0;
+    q1Count[s] = 0;
     q2Count[s] = 0;
+    q3Count[s] = 0;
   });
 
   submitters.forEach((voter) => {
@@ -76,7 +83,10 @@ function computeAnalytics(classroom: Classroom): Analytics {
     [a.q1, a.q2, a.q3].forEach((chosen) => {
       if (chosen && roster.has(chosen)) choiceCount[chosen] += 1;
     });
+    // Per-question tallies drive the profile-based interventions.
+    if (a.q1 && roster.has(a.q1)) q1Count[a.q1] += 1;
     if (a.q2 && roster.has(a.q2)) q2Count[a.q2] += 1;
+    if (a.q3 && roster.has(a.q3)) q3Count[a.q3] += 1;
     adjacency[voter] = Array.from(new Set(picksOf(a, roster)));
   });
 
@@ -160,7 +170,9 @@ function computeAnalytics(classroom: Classroom): Analytics {
   return {
     submitterCount: submitters.length,
     choiceCount,
+    q1Count,
     q2Count,
+    q3Count,
     adjacency,
     mutualPairs,
     transparent,
@@ -169,20 +181,55 @@ function computeAnalytics(classroom: Classroom): Analytics {
   };
 }
 
-/** Pair each isolated/transparent student with an available high-Q2 anchor. */
-function buildMatchmaker(analytics: Analytics): { isolated: string; anchor: string }[] {
-  const isolatedPool = Array.from(
-    new Set([...analytics.transparent, ...analytics.oneDirectional]),
+interface Interventions {
+  bridge: { student: string; peer: string }[]; // transparent → moderate-status high-Q2 peer
+  cliqueDilution: string[][]; // = analytics.cliques (grouped passthrough)
+  hiddenStrength: string[]; // competent-but-socially-lonely students
+}
+
+/** Fraction of the class's max popularity above which a peer is "hyper-popular". */
+const HYPER_FRACTION = 0.66;
+
+/**
+ * Derive tailored clinical-pedagogical interventions from the sociometric matrices.
+ * Unlike a naive "pair with the most popular anchor" matchmaker, the bridge-peer
+ * algorithm DELIBERATELY avoids the hyper-popular top tier (pairing a lonely child
+ * with the class star tends to backfire) and favors a moderate-status, high-Q2
+ * ("emotional anchor") peer as a safe, non-threatening bridge.
+ */
+function buildInterventions(analytics: Analytics): Interventions {
+  const { transparent, q1Count, q2Count, q3Count, choiceCount, cliques } = analytics;
+  const transparentSet = new Set(transparent);
+
+  // --- (a) Bridge-Peer matching -------------------------------------------
+  const nonTransparentCounts = Object.entries(choiceCount)
+    .filter(([name]) => !transparentSet.has(name))
+    .map(([, c]) => c);
+  const maxCount = nonTransparentCounts.length ? Math.max(...nonTransparentCounts) : 0;
+  const hyperThreshold = maxCount * HYPER_FRACTION;
+
+  const isAnchor = (name: string) => !transparentSet.has(name) && q2Count[name] >= 1;
+  // Preferred: moderate social status (excludes the hyper-popular top third).
+  let candidates = Object.keys(q2Count)
+    .filter((name) => isAnchor(name) && choiceCount[name] <= hyperThreshold);
+  // Fallback: any emotional anchor if no moderate one exists.
+  if (candidates.length === 0) candidates = Object.keys(q2Count).filter(isAnchor);
+  // Rank by Q2 strength desc, then prefer the more moderate (lower total) peer.
+  candidates.sort((a, b) => q2Count[b] - q2Count[a] || choiceCount[a] - choiceCount[b]);
+
+  const bridge = transparent.map((student, i) => ({
+    student,
+    // Round-robin so one bridge peer isn't overloaded; '' when no anchor emerged.
+    peer: candidates.length ? candidates[i % candidates.length] : '',
+  }));
+
+  // --- (b) Hidden Strength: recognized ONLY on the competence axis ---------
+  const hiddenStrength = Object.keys(q1Count).filter(
+    (name) => q1Count[name] >= 1 && q2Count[name] === 0 && q3Count[name] === 0,
   );
-  const isolatedSet = new Set(isolatedPool);
-  // Anchors: most-chosen emotional supporters, never an isolated student.
-  const anchors = Object.entries(analytics.q2Count)
-    .filter(([name, count]) => count > 0 && !isolatedSet.has(name))
-    .sort((a, b) => b[1] - a[1])
-    .map(([name]) => name);
-  if (anchors.length === 0) return isolatedPool.map((isolated) => ({ isolated, anchor: '' }));
-  // Round-robin so one anchor isn't overloaded.
-  return isolatedPool.map((isolated, i) => ({ isolated, anchor: anchors[i % anchors.length] }));
+
+  // --- (c) Clique Dilution: passthrough of the detected closed clusters ----
+  return { bridge, cliqueDilution: cliques, hiddenStrength };
 }
 
 /**
@@ -212,8 +259,8 @@ export default function SocialMapperDashboard() {
     [selectedClass],
   );
 
-  const matchmaker = useMemo(
-    () => (analytics ? buildMatchmaker(analytics) : []),
+  const interventions = useMemo(
+    () => (analytics ? buildInterventions(analytics) : null),
     [analytics],
   );
 
@@ -443,38 +490,106 @@ export default function SocialMapperDashboard() {
             </Paper>
           </Box>
 
-          {/* Pedagogical action plan */}
-          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderTop: `3px solid ${TEAL}` }}>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
-              <TipsAndUpdatesRoundedIcon sx={{ color: AMBER }} />
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                💡 תוכנית עבודה חברתית מוצעת
-              </Typography>
-            </Stack>
-            {matchmaker.length === 0 ? (
-              <Typography color="text.secondary">
-                לא זוהו תלמידים בסיכון לבדידות בסקר זה — האקלים החברתי נראה מכיל. 💛
-              </Typography>
-            ) : (
-              <Stack spacing={1.5}>
-                {matchmaker.map(({ isolated, anchor }) => (
-                  <Alert key={isolated} severity="info" sx={{ borderRadius: 2 }}>
-                    {anchor ? (
-                      <>
-                        מומלץ לשלב את <b>{isolated}</b> יחד עם <b>{anchor}</b> בעבודת הצוות הקרובה או
-                        להושיבם יחד בסקיצת המקומות החדשה.
-                      </>
-                    ) : (
-                      <>
-                        מומלץ לשים לב ל<b>{isolated}</b> ולחפש עבורו חבר תומך לעבודת צוות או לישיבה
-                        משותפת (טרם זוהה "עוגן רגשי" מובהק בכיתה).
-                      </>
-                    )}
-                  </Alert>
-                ))}
+          {/* Clinical-pedagogical intervention plan */}
+          {interventions && (
+            <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderTop: `3px solid ${TEAL}` }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+                <TipsAndUpdatesRoundedIcon sx={{ color: AMBER }} />
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                  🎯 תוכנית התערבות ואקלים כיתתי מוצעת
+                </Typography>
               </Stack>
-            )}
-          </Paper>
+
+              {interventions.bridge.length === 0 &&
+              interventions.cliqueDilution.length === 0 &&
+              interventions.hiddenStrength.length === 0 ? (
+                <Typography color="text.secondary">
+                  לא זוהו פרופילים חברתיים הדורשים התערבות ממוקדת בסקר זה — האקלים החברתי נראה מכיל. 💛
+                </Typography>
+              ) : (
+                <Stack spacing={3}>
+                  {/* (a) Bridge-Peer matching */}
+                  {interventions.bridge.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: RED }}>
+                        📌 עמיתי גשר — שילוב מבוקר של ילדים שקופים
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {interventions.bridge.map(({ student, peer }) => (
+                          <Alert key={student} severity="info" sx={{ borderRadius: 2 }}>
+                            {peer ? (
+                              <>
+                                <b>התערבות מומלצת עבור {student}:</b> יש לשלב אותו/ה בקבוצת עבודה קטנה
+                                (עד 3 תלמידים) יחד עם <b>{peer}</b>. <b>{peer}</b> זוהה/תה בכיתה כעוגן
+                                תמיכה רגשי ויכול/ה לשמש כ'עמית גשר' בטוח ולא מאיים עבורו/ה.
+                              </>
+                            ) : (
+                              <>
+                                <b>התערבות מומלצת עבור {student}:</b> יש לשלב אותו/ה בקבוצת עבודה קטנה
+                                (עד 3 תלמידים). טרם זוהה "עוגן תמיכה רגשי" מובהק שיכול לשמש כעמית גשר —
+                                מומלץ לבחור עמית בעל אמפתיה גבוהה מתוך היכרותכם עם הכיתה.
+                              </>
+                            )}
+                          </Alert>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {/* (b) Clique dilution */}
+                  {interventions.cliqueDilution.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: SLATE }}>
+                        ⚠️ דילול קליקות מבוקר
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {interventions.cliqueDilution.map((members, i) => (
+                          <Alert key={i} severity="warning" sx={{ borderRadius: 2 }}>
+                            <b>אסטרטגיית דילול עבור קליקת {members.join(', ')}:</b> הקבוצה מציגה דפוסי
+                            סגר חברתי מובהקים שעלולים לייצר ניכור בכיתה. במשימה הקרובה, מומלץ לפצלם
+                            באופן יזום: להציב את <b>{members[0]}</b> ו-<b>{members[1]}</b> במשימת חקר
+                            מבוססת תלות הדדית יחד עם ילדים מהמעגל החיצוני.
+                          </Alert>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {/* (c) Hidden strength */}
+                  {interventions.hiddenStrength.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: TEAL }}>
+                        🌟 תפקידי מפתח מבוססי חוזקה
+                      </Typography>
+                      <Stack spacing={1.5}>
+                        {interventions.hiddenStrength.map((name) => (
+                          <Alert key={name} severity="success" sx={{ borderRadius: 2 }}>
+                            <b>מינוף חוזקה מושתקת עבור {name}:</b> התלמיד/ה נתפס/ת בכיתה כבעל/ת יכולת
+                            ומסוגלות גבוהה בתחום הלימודי/טכנולוגי, אך חווה בדידות חברתית במעגלי הפנאי.
+                            מומלץ להעניק לו/ה תפקיד מפתח רשמי בכיתה (אחראי/ת טכנולוגיה, חונך/ת לימודי/ת)
+                            שימנף את ההערכה המקצועית כלפיו/ה ויתרגם אותה לאינטראקציה חברתית.
+                          </Alert>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                </Stack>
+              )}
+
+              {/* Always-on clinical discretion note */}
+              <Divider sx={{ my: 2.5 }} />
+              <Alert
+                icon={false}
+                severity="warning"
+                sx={{ borderRadius: 2, bgcolor: 'rgba(251, 191, 36, 0.08)' }}
+              >
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                  💡 <b>הערת מחנך:</b> כלל ההמלצות מיועדות ליישום עקיף ודיסקרטי דרך ניהול מרחב הכיתה.
+                  אין לשתף את הילדים או ההורים בממצאי המפה החברתית כדי למנוע הטיית התנהגות או פגיעה רגשית.
+                </Typography>
+              </Alert>
+            </Paper>
+          )}
         </>
       )}
 

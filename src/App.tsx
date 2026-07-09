@@ -20,6 +20,7 @@ import StudentInsights from './teacher-tools/StudentInsights';
 import CommunicationGenerator from './teacher-tools/CommunicationGenerator';
 import LessonBuilder from './teacher-tools/LessonBuilder';
 import SocialMapperDashboard from './teacher-tools/SocialMapperDashboard';
+import UlpanRoadmap from './teacher-tools/UlpanRoadmap';
 import SocialSurveyStudentPage from './pages/SocialSurveyStudentPage';
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -91,6 +92,7 @@ export default function App() {
                     <Route path="whatsapp-generator" element={<CommunicationGenerator />} />
                     <Route path="lesson-builder" element={<LessonBuilder />} />
                     <Route path="social-mapper" element={<SocialMapperDashboard />} />
+                    <Route path="ulpan-generator" element={<UlpanRoadmap />} />
                   </Route>
                   {/* Ungated so a teacher with no classes can still reach the dashboard. */}
                   <Route path="/dashboard" element={<DashboardPage />} />

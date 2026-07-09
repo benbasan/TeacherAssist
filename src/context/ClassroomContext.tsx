@@ -106,6 +106,10 @@ interface ClassroomContextValue {
   ) => Promise<void>;
   /** Close the survey — locks further student entries (data retained for analysis). */
   closeSocialSurvey: (classId: string) => Promise<void>;
+
+  // --- Ulpan Accelerator tool (Teacher's Private Workspace; cloud-persisted) --
+  /** Toggle a roadmap chapter's completion for a class (≤10 ints — no cap needed). */
+  toggleUlpanChapter: (classId: string, chapterId: number) => Promise<void>;
 }
 
 const ClassroomContext = createContext<ClassroomContextValue | null>(null);
@@ -143,6 +147,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       socialSurveyPin: c.socialSurveyPin ?? '',
       socialSurveyLevel: c.socialSurveyLevel ?? 'elementary',
       socialSurveyData: c.socialSurveyData ?? {},
+      ulpanCompletedChapters: c.ulpanCompletedChapters ?? [],
     }));
   }, [user?.unsafeMetadata]);
 
@@ -184,6 +189,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
         socialSurveyPin: '',
         socialSurveyLevel: 'elementary',
         socialSurveyData: {},
+        ulpanCompletedChapters: [],
       };
       await persist([...classrooms, classroom]);
     },
@@ -469,6 +475,22 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
     [classrooms, persist],
   );
 
+  const toggleUlpanChapter = useCallback(
+    async (classId: string, chapterId: number) => {
+      await persist(
+        classrooms.map((c) => {
+          if (c.id !== classId) return c;
+          const done = c.ulpanCompletedChapters ?? [];
+          const next = done.includes(chapterId)
+            ? done.filter((id) => id !== chapterId)
+            : [...done, chapterId];
+          return { ...c, ulpanCompletedChapters: next };
+        }),
+      );
+    },
+    [classrooms, persist],
+  );
+
   const value = useMemo<ClassroomContextValue>(
     () => ({
       classrooms,
@@ -498,6 +520,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       startSocialSurvey,
       submitStudentAnswers,
       closeSocialSurvey,
+      toggleUlpanChapter,
     }),
     [
       classrooms,
@@ -527,6 +550,7 @@ export function ClassroomProvider({ children }: { children: ReactNode }) {
       startSocialSurvey,
       submitStudentAnswers,
       closeSocialSurvey,
+      toggleUlpanChapter,
     ],
   );
 

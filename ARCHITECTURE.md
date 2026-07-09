@@ -75,6 +75,8 @@ src/
 │       ├── spot-the-glitch-content.json       # SpotTheGlitch: age-cohort language-error topics (grammar/spelling/idioms)
 │       ├── social-reflection-walk-content.json # StepByStepReflection: age-cohort SEL forward/backward statements + debrief cards
 │       ├── two-truths-lie-content.json         # TwoTruthsLie: age-cohort example fact-set "inspiration bank"
+│       ├── ulpan-chapters.json                 # UlpanRoadmap tool: the fixed 10-chapter SLA roadmap (3 phases → chapters → baseTokens) (§10)
+│       ├── ulpan-generator-content.json        # UlpanRoadmap tool: lesson-generation corpus (warm-ups ×cohort, contrastive notes ×language, missions ×level…) (§10)
 │       ├── english-word-pop-content.json       # WordPop: age-cohort English→Hebrew vocab categories
 │       └── would-you-rather-content.json       # WouldYouRather: age-cohort "this-or-that" dilemma packs
 ├── games/
@@ -113,7 +115,8 @@ src/
 │   ├── StudentInsights.tsx     # "תיק תלמיד": per-student pedagogical insight log + timeline
 │   ├── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
 │   ├── LessonBuilder.tsx       # "אדריכל השיעור": build ordered game/tool playlists per class (§12)
-│   └── SocialMapperDashboard.tsx # "מצפן חברתי": sociometric analytics — network map + climate alerts + matchmaker (§10)
+│   ├── SocialMapperDashboard.tsx # "מצפן חברתי": sociometric analytics — network map + climate alerts + matchmaker (§10)
+│   └── UlpanRoadmap.tsx        # "מחולל האולפן הדינמי": 10-chapter SLA roadmap → profile-tailored lesson/worksheet/mission generator (§10)
 ├── pages/
 │   ├── HomePage.tsx            # Landing gateway at "/": split-screen → /classroom | /teacher-workspace (§3)
 │   ├── ClassroomWorkspacePage.tsx # מרחב הכיתה hub at /classroom: games catalog (subject + cohort ToggleButton filters) + STATIC utilities section (§3/§9)
@@ -161,6 +164,7 @@ src/
                   "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
                   "lesson-builder"    → <LessonBuilder/>            // Session Builder / אדריכל השיעור (§12)
                   "social-mapper"     → <SocialMapperDashboard/>    // Social Compass sociometric analytics (§10)
+                  "ulpan-generator"   → <UlpanRoadmap/>             // Ulpan Accelerator: SLA lesson generator (§10)
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
               "*"              → <Navigate to="/" replace />   // unknown path → gateway
@@ -423,7 +427,8 @@ per-user cloud storage:
   `marblesReward` → `"צ'ופר כיתתי"`, `customChoresList` → `DEFAULT_CHORES`,
   `currentChoreAssignments` → `{}`, `studentInsights` → `{}`, `whatsappHistory` → `[]`,
   `savedPlaylists` → `[]`, `socialSurveyActive` → `false`, `socialSurveyPin` → `''`,
-  `socialSurveyLevel` → `'elementary'`, `socialSurveyData` → `{}`.
+  `socialSurveyLevel` → `'elementary'`, `socialSurveyData` → `{}`,
+  `ulpanCompletedChapters` → `[]`.
 - **Single read/write layer:** `src/context/ClassroomContext.tsx` wraps `useUser()` and is the only
   place that touches the metadata. It **derives** `classrooms` from the live `user.unsafeMetadata`
   (Clerk's `user` is reactive and re-renders after each `user.update`, so no separate copy can go
@@ -448,7 +453,9 @@ per-user cloud storage:
   `startSocialSurvey(classId, level)` (generates a 4-digit PIN, sets `socialSurveyActive`/
   `socialSurveyLevel`, and **clears** prior `socialSurveyData`), `submitStudentAnswers(classId,
   studentName, answers)` (merges/overwrites one record per student), and `closeSocialSurvey(classId)`
-  (sets `socialSurveyActive` false, retaining the data for analysis).
+  (sets `socialSurveyActive` false, retaining the data for analysis). The Ulpan Accelerator (§10)
+  adds `toggleUlpanChapter(classId, chapterId)` — adds/removes a chapter id in the class's
+  `ulpanCompletedChapters` (max 10 small ints, so no cap logic is needed).
 - **Session state (NOT persisted):** the same context also holds in-memory `activeClassroomId` and
   `absentStudents`, with `setActiveClassroom(id)` (clearing also resets attendance) and
   `toggleStudentAttendance(name)`. These are deliberately **not** written to Clerk, so every app
@@ -655,6 +662,29 @@ workspaces.** A silent sociometric survey that detects loneliness/isolation. It 
   competence axis (`q1≥1 ∧ q2=0 ∧ q3=0`) get a leadership-role recommendation; and a fixed clinical
   "הערת מחנך" reminding the teacher to apply everything indirectly and never share the map with children/
   parents. **Not** a `/tools` utility or catalog game — no registry/whats-new entries.
+
+**Fifth tool — `UlpanRoadmap.tsx` ("מחולל האולפן הדינמי לעולים חדשים"), the Ulpan Accelerator at
+`/teacher-workspace/ulpan-generator`:** an SLA (Second Language Acquisition) lesson architect for
+teaching Hebrew to new-immigrant students. A fixed **10-chapter pedagogical roadmap** (3 phases:
+הישרדות וביטחון → המרחב החברתי → העמקה רגשית ותיאורית) renders as a clean RTL vertical timeline
+grouped by phase (`data/content/ulpan-chapters.json`: `phases → chapters → {id, title, subtitle,
+icon, baseTokens[{word, emoji}]}`). Clicking a chapter opens a right-anchored **profile drawer**
+(3 `Select`s: age cohort — the standard §11 keys / native language — english·russian·french·spanish·
+other / level — 1 אפס עברית·2 הישרדותית·3 תקשורת בסיסית) whose "גנרט מערך שיעור" button runs
+`buildLessonPlan(chapter, profile)` — a **pure deterministic template engine** (no backend/LLM) that
+composes `data/content/ulpan-generator-content.json` (warm-ups keyed chapter×cohort, contrastive
+notes keyed globally per native language with an optional `chapters` filter, level guidance written
+once per level, missions keyed chapter×level; vocabulary is **derived**: level 1 = `baseTokens`,
+level 2/3 add `expansionTokens` tiers). Output renders in 3 tabs: **🕒 מערך 45 דק'** (warm-up /
+vocabulary+contrastive Alerts / a **smartboard-game interlock** that names a real games-registry game
+per chapter with a profile-customized word array + copy-JSON button and a `/game/:id` link opened in
+a new tab / closure), **📄 דף תרגול** (a forced-light on-screen preview + `printWorksheet` — opens a
+standalone light `<html dir="rtl">` document in a new window with `@page` A4 rules and auto
+`window.print()`, escaping the dark corporate theme), and **🚀 משימת עולם אמיתי** (a ticket-styled
+corridor micro-challenge). Same **local session-decoupled class selection** as the other tools;
+choosing a class is *optional* and only enables the per-chapter "הושלם"/"טרם נלמד" progress toggle,
+persisted via `ulpanCompletedChapters` + `toggleUlpanChapter` (§7). **Not** a `/tools` utility or
+catalog game — no registry/whats-new entries.
 
 **Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
 `/teacher-workspace`, and add a card to `TeacherWorkspacePage` (give it a `to` — the card auto-enables
@@ -1589,3 +1619,33 @@ Append a dated entry here for every significant technical decision.
   regard into social interaction.
   (3) **Clique Dilution** reuses the existing `cliques` detection, naming members and proposing an
   interdependent split. Isolated to `SocialMapperDashboard.tsx`; no context/type/route/content change.
+- **2026-07-09 — Workspace Tool #5: Ulpan Accelerator (מחולל האולפן הדינמי לעולים חדשים,
+  `/teacher-workspace/ulpan-generator`).**
+  *Why:* teachers of new-immigrant students improvise Hebrew-as-a-second-language lessons with no
+  SLA scaffolding; a fixed, research-shaped 10-chapter roadmap plus per-student profiling (age /
+  native language / level) turns that into a 30-second lesson-prep flow.
+  *How:* `teacher-tools/UlpanRoadmap.tsx` + two content files + a child route + a dashboard card
+  (§10). All instructional copy is authored in a veteran-Ulpan expert voice and lives in JSON.
+  *Key choices:*
+  (1) **Deterministic template engine, not an LLM/backend** — the app is serverless (§7); a pure
+  `buildLessonPlan(chapter, profile)` over a curated corpus gives instant, reviewable, offline
+  output with zero cost/latency/safety surface.
+  (2) **Corpus keying balances richness vs. maintainability** — the two matrices that carry the
+  pedagogy are fully expanded (warm-ups chapter×cohort so teen warm-ups are never babyish; missions
+  chapter×level), while contrastive notes are keyed **globally per native language** (pronunciation/
+  structure issues are language-wide, with an optional `chapters` filter) and level guidance is
+  written once per level.
+  (3) **Word arrays are derived, never stored** — level 1 = the chapter's `baseTokens`; levels 2/3
+  append `expansionTokens` tiers; one source of truth feeds the plan, the game interlock, and the
+  worksheet.
+  (4) **Game interlock maps to existing registry games** — the brief's example game ("אחד בחוץ")
+  doesn't exist; each chapter names a real game whose mechanics fit its lexicon (e.g. `silent-ninja`
+  as TPR for classroom commands, `hungry-word-monster` for food). Input-driven games
+  (`two-truths-lie`, `punctuation-orchestra`) get paste-ready generated sentences.
+  (5) **Print via a new light window, not `@media print`** — the workspace is dark-themed and full
+  of MUI portals; a self-contained `<html dir="rtl">` document (Rubik link + inline styles + `@page`
+  A4 + `onload` print) is the only robust way to emit a clean white worksheet.
+  (6) **`ulpanCompletedChapters` is uncapped** — unlike insights/whatsapp/playlists (15/10/20 caps),
+  it holds at most 10 small ints, far below any metadata concern.
+  (7) **Age profile reuses the standard §11 cohort keys** — the brief's three age bands are exactly
+  `lower_elementary`/`upper_elementary`/`junior_high_high`; no parallel taxonomy invented.

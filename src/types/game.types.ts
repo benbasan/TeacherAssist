@@ -128,6 +128,8 @@ export interface Classroom {
   socialSurveyLevel?: SocialSurveyLevel;
   /** Social Compass tool: submitter student name → their 3 confidential picks (default {}). */
   socialSurveyData?: Record<string, SocialSurveyAnswers>;
+  /** Ulpan Accelerator tool: ids of roadmap chapters this class completed (≤10 ints; §10). */
+  ulpanCompletedChapters?: number[];
 }
 
 /** A single entry on the "What's New" timeline. */

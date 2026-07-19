@@ -28,99 +28,26 @@ import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded';
 import SportsEsportsRoundedIcon from '@mui/icons-material/SportsEsportsRounded';
 import AutoStoriesRoundedIcon from '@mui/icons-material/AutoStoriesRounded';
+import PlayCircleFilledRoundedIcon from '@mui/icons-material/PlayCircleFilledRounded';
 import { Link as RouterLink } from 'react-router-dom';
 import { useClassrooms } from '../context/ClassroomContext';
-import chaptersData from '../data/content/ulpan-chapters.json';
-import generatorData from '../data/content/ulpan-generator-content.json';
-import gamesRegistry from '../data/games-registry.json';
-import type { EducationalGame } from '../types/game.types';
-
-// ---------------------------------------------------------------------------
-// Types — shapes of the two content JSON files + the profile/lesson contracts
-// ---------------------------------------------------------------------------
-
-type CohortKey = 'lower_elementary' | 'upper_elementary' | 'junior_high_high';
-type LevelKey = 'level_1' | 'level_2' | 'level_3';
-type NativeLangKey = 'english' | 'russian' | 'french' | 'spanish' | 'other';
-
-interface UlpanProfile {
-  ageGroup: CohortKey;
-  nativeLanguage: NativeLangKey;
-  level: LevelKey;
-}
-
-interface TokenItem {
-  word: string;
-  emoji: string;
-}
-
-interface UlpanChapter {
-  id: number;
-  title: string;
-  subtitle: string;
-  icon: string;
-  baseTokens: TokenItem[];
-}
-
-interface UlpanPhase {
-  key: string;
-  label: string;
-  blurb: string;
-  chapters: UlpanChapter[];
-}
-
-interface ContrastiveNote {
-  text: string;
-  /** Optional chapter filter — a note without it applies to every chapter. */
-  chapters?: number[];
-}
-
-interface ChapterCorpus {
-  warmup: Record<CohortKey, string>;
-  expansionTokens: { level_2: string[]; level_3: string[] };
-  sentenceFrames: string[];
-  game: {
-    gameId: string;
-    rationale: string;
-    launchTip: Record<LevelKey, string>;
-  };
-  mission: Record<LevelKey, { title: string; challenge: string; success: string }>;
-}
-
-interface GeneratorContent {
-  intro: { title: string; body: string };
-  ageGroups: Record<CohortKey, string>;
-  levels: Record<
-    LevelKey,
-    { label: string; vocabApproach: string; worksheetGuidance: string; closure: string }
-  >;
-  nativeLanguages: Record<NativeLangKey, { label: string; notes: ContrastiveNote[] }>;
-  chapters: Record<string, ChapterCorpus>;
-}
-
-interface GeneratedLesson {
-  chapter: UlpanChapter;
-  profile: UlpanProfile;
-  warmup: string;
-  /** Full teaching vocabulary: baseTokens + level-appropriate expansion tiers. */
-  wordArray: string[];
-  vocabApproach: string;
-  contrastiveNotes: string[];
-  game: { gameId: string; gameTitle: string; rationale: string; launchTip: string };
-  /** Input-driven games get these as paste-ready generated sentences. */
-  pasteSentences: string[];
-  closure: string;
-  sentenceFrames: string[];
-  worksheetGuidance: string;
-  mission: { title: string; challenge: string; success: string };
-}
-
-const PHASES = (chaptersData as { phases: UlpanPhase[] }).phases;
-const CONTENT = generatorData as unknown as GeneratorContent;
-const GAMES = gamesRegistry as EducationalGame[];
-
-/** Games whose mechanics consume teacher-typed input — the generated sentences paste straight in. */
-const INPUT_DRIVEN_GAMES = new Set(['two-truths-lie', 'punctuation-orchestra']);
+import {
+  buildLessonPlan,
+  CONTENT,
+  INPUT_DRIVEN_GAMES,
+  PHASES,
+} from '../data/ulpanLesson';
+import type {
+  CohortKey,
+  GeneratedLesson,
+  LevelKey,
+  NativeLangKey,
+  UlpanChapter,
+  UlpanProfile,
+} from '../data/ulpanLesson';
+import { buildUlpanExitTicketDoc, buildUlpanWorksheetDoc } from '../data/ulpanPrint';
+import LessonPlayer from '../components/LessonPlayer';
+import PrintDocDialog from '../components/PrintDocDialog';
 
 // Accents tuned to read on the dark corporate surface.
 const EMERALD = '#34d399';
@@ -129,179 +56,10 @@ const CYAN = '#4dd0e1';
 const AMBER = '#fbbf24';
 
 // ---------------------------------------------------------------------------
-// The generation engine — a pure deterministic composition of the corpus.
-// All copy is authored in the veteran-Ulpan/SLA expert voice inside the JSON.
-// ---------------------------------------------------------------------------
-
-function buildLessonPlan(chapter: UlpanChapter, profile: UlpanProfile): GeneratedLesson {
-  const corpus = CONTENT.chapters[String(chapter.id)];
-  const levelMeta = CONTENT.levels[profile.level];
-
-  const baseWords = chapter.baseTokens.map((t) => t.word);
-  const expansion =
-    profile.level === 'level_1'
-      ? []
-      : profile.level === 'level_2'
-        ? corpus.expansionTokens.level_2
-        : [...corpus.expansionTokens.level_2, ...corpus.expansionTokens.level_3];
-  const wordArray = [...baseWords, ...expansion];
-
-  const contrastiveNotes = CONTENT.nativeLanguages[profile.nativeLanguage].notes
-    .filter((n) => !n.chapters || n.chapters.includes(chapter.id))
-    .slice(0, 3)
-    .map((n) => n.text);
-
-  const gameTitle = GAMES.find((g) => g.id === corpus.game.gameId)?.title ?? corpus.game.gameId;
-
-  return {
-    chapter,
-    profile,
-    warmup: corpus.warmup[profile.ageGroup],
-    wordArray,
-    vocabApproach: levelMeta.vocabApproach,
-    contrastiveNotes,
-    game: {
-      gameId: corpus.game.gameId,
-      gameTitle,
-      rationale: corpus.game.rationale,
-      launchTip: corpus.game.launchTip[profile.level],
-    },
-    pasteSentences: corpus.expansionTokens.level_3,
-    closure: levelMeta.closure,
-    sentenceFrames: corpus.sentenceFrames,
-    worksheetGuidance: levelMeta.worksheetGuidance,
-    mission: corpus.mission[profile.level],
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Printable worksheet — a standalone LIGHT document opened in a new window
-// (the workspace itself is dark-themed; see ARCHITECTURE.md §10 Decision Log).
-// ---------------------------------------------------------------------------
-
-function buildWorksheetHtml(lesson: GeneratedLesson): string {
-  const { chapter, profile } = lesson;
-  const isLevel1 = profile.level === 'level_1';
-
-  // Matching exercise: emojis rotated by half so the pairs never sit side-by-side.
-  const tokens = chapter.baseTokens;
-  const half = Math.ceil(tokens.length / 2);
-  const shuffledEmojis = [...tokens.slice(half), ...tokens.slice(0, half)].map((t) => t.emoji);
-
-  const wordBank = tokens
-    .map(
-      (t) =>
-        `<div class="bank-item"><span class="bank-emoji">${t.emoji}</span><span class="bank-word">${t.word}</span></div>`,
-    )
-    .join('');
-
-  // Wide ruled writing lines; level 1 gets a pale traceable word on each line.
-  const writingLines = tokens
-    .slice(0, 6)
-    .map(
-      (t) =>
-        `<div class="write-line">${isLevel1 ? `<span class="trace">${t.word}</span>` : ''}</div>`,
-    )
-    .join('');
-
-  const matching = tokens
-    .map(
-      (t, i) =>
-        `<div class="match-row"><span class="match-word">${t.word}</span><span class="match-dots"></span><span class="match-emoji">${shuffledEmojis[i]}</span></div>`,
-    )
-    .join('');
-
-  const frames =
-    profile.level === 'level_1'
-      ? ''
-      : `<section>
-          <h2>✏️ משלימים משפט</h2>
-          ${lesson.sentenceFrames.map((f) => `<p class="frame">${f}</p>`).join('')}
-        </section>`;
-
-  return `<!doctype html>
-<html lang="he" dir="rtl">
-<head>
-<meta charset="UTF-8" />
-<title>דף תרגול — ${chapter.title}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<style>
-  @page { size: A4; margin: 15mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Rubik', 'Segoe UI', sans-serif; color: #111827; background: #fff; padding: 24px; }
-  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #111827; padding-bottom: 12px; }
-  header .title h1 { font-size: 26px; font-weight: 800; }
-  header .title p { font-size: 14px; color: #6b7280; margin-top: 2px; }
-  header .meta { font-size: 14px; text-align: left; }
-  header .meta div { margin-bottom: 6px; }
-  header .meta span { display: inline-block; min-width: 140px; border-bottom: 1.5px dotted #9ca3af; }
-  section { margin-top: 26px; }
-  h2 { font-size: 18px; font-weight: 700; margin-bottom: 12px; border-inline-start: 5px solid #111827; padding-inline-start: 10px; }
-  .bank { display: flex; flex-wrap: wrap; gap: 10px; }
-  .bank-item { display: flex; align-items: center; gap: 8px; border: 1.5px solid #d1d5db; border-radius: 12px; padding: 8px 14px; }
-  .bank-emoji { font-size: 26px; }
-  .bank-word { font-size: 28px; font-weight: 700; }
-  .write-line { height: 46px; border-bottom: 2px solid #cbd5e1; display: flex; align-items: flex-end; padding-bottom: 2px; }
-  .trace { font-size: 30px; font-weight: 500; color: #d1d5db; letter-spacing: 2px; }
-  .match-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
-  .match-word { font-size: 24px; font-weight: 700; min-width: 130px; }
-  .match-dots { flex: 1; border-bottom: 2px dotted #9ca3af; }
-  .match-emoji { font-size: 30px; }
-  .frame { font-size: 22px; line-height: 2.4; }
-  footer { margin-top: 30px; border-top: 1.5px solid #e5e7eb; padding-top: 10px; font-size: 12px; color: #6b7280; }
-</style>
-</head>
-<body onload="window.print()">
-  <header>
-    <div class="title">
-      <h1>${chapter.icon} ${chapter.title}</h1>
-      <p>${chapter.subtitle} · ${CONTENT.levels[profile.level].label}</p>
-    </div>
-    <div class="meta">
-      <div>שם: <span></span></div>
-      <div>תאריך: <span></span></div>
-    </div>
-  </header>
-  <section>
-    <h2>📦 מחסן המילים שלי</h2>
-    <div class="bank">${wordBank}</div>
-  </section>
-  <section>
-    <h2>🖊️ מתאמנים בכתיבה</h2>
-    ${writingLines}
-  </section>
-  <section>
-    <h2>🔗 מחברים מילה לציור</h2>
-    ${matching}
-  </section>
-  ${frames}
-  <footer>💡 למורה: ${lesson.worksheetGuidance}</footer>
-</body>
-</html>`;
-}
-
-function printWorksheet(lesson: GeneratedLesson): void {
-  const w = window.open('', '_blank', 'width=850,height=1100');
-  if (!w) return; // popup blocked — the on-screen preview still shows everything
-  w.document.write(buildWorksheetHtml(lesson));
-  w.document.close();
-}
-
-// ---------------------------------------------------------------------------
 // Small presentational helpers
 // ---------------------------------------------------------------------------
 
-function TimeBlock({
-  time,
-  title,
-  children,
-}: {
-  time: string;
-  title: string;
-  children: ReactNode;
-}) {
+function TimeBlock({ time, title, children }: { time: string; title: string; children: ReactNode }) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
@@ -326,14 +84,13 @@ function WordChips({ words }: { words: string[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main component
+// Main component — the "Brain": roadmap + profile + generated lesson dashboard
 // ---------------------------------------------------------------------------
 
-export default function UlpanRoadmap() {
+export default function UlpanWorkspace() {
   const { classrooms, activeClassroomId, toggleUlpanChapter } = useClassrooms();
 
   // Local, session-decoupled selection (does NOT call setActiveClassroom). See §10.
-  // Class selection here is OPTIONAL — it only enables per-chapter progress tracking.
   const [selectedClassId, setSelectedClassId] = useState<string | null>(activeClassroomId);
   const [view, setView] = useState<'roadmap' | 'lesson'>('roadmap');
   const [drawerChapter, setDrawerChapter] = useState<UlpanChapter | null>(null);
@@ -345,6 +102,8 @@ export default function UlpanRoadmap() {
   const [lesson, setLesson] = useState<GeneratedLesson | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const selectedClass = useMemo(
     () => classrooms.find((c) => c.id === selectedClassId) ?? null,
@@ -400,6 +159,32 @@ export default function UlpanRoadmap() {
           </Button>
         </Stack>
 
+        {/* Primary launch + print actions */}
+        <Paper variant="outlined" sx={{ p: 2, borderInlineStart: `4px solid ${CYAN}` }}>
+          <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<PlayCircleFilledRoundedIcon />}
+              onClick={() => setPlayerOpen(true)}
+              sx={{ fontWeight: 800 }}
+            >
+              🚀 הפעל שיעור על הלוח החכם
+            </Button>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<PrintRoundedIcon />}
+              onClick={() => setPrintOpen(true)}
+            >
+              🖨️ הדפס דף עבודה + כרטיס יציאה
+            </Button>
+            <Typography variant="caption" color="text.secondary" sx={{ flexBasis: '100%' }}>
+              הנגן נפתח במסך מלא ובהיר — מוכן להקרנה מול הכיתה. שולחן העבודה נשאר פתוח מאחוריו.
+            </Typography>
+          </Stack>
+        </Paper>
+
         <Paper variant="outlined">
           <Tabs
             value={activeTab}
@@ -408,18 +193,18 @@ export default function UlpanRoadmap() {
             sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
           >
             <Tab label="🕒 מערך שיעור דינמי (45 דק')" sx={{ fontWeight: 700 }} />
-            <Tab label="📄 דף תרגול להדפסה" sx={{ fontWeight: 700 }} />
+            <Tab label="📄 דפי עבודה להדפסה" sx={{ fontWeight: 700 }} />
             <Tab label="🚀 משימת עולם אמיתי" sx={{ fontWeight: 700 }} />
           </Tabs>
 
           {/* --- Tab 1: the 45-minute lesson plan --------------------------- */}
           {activeTab === 0 && (
             <Stack spacing={2} sx={{ p: { xs: 2, sm: 3 } }}>
-              <TimeBlock time="0-10 דק'" title="פתיחה בתנועה — חימום מותאם גיל">
+              <TimeBlock time="0-5 דק'" title="הקרס — פתיחה מסקרנת מותאמת גיל">
                 <Typography variant="body2">{lesson.warmup}</Typography>
               </TimeBlock>
 
-              <TimeBlock time="10-25 דק'" title="אוצר המילים של הפרק — הקניה מפורשת">
+              <TimeBlock time="5-17 דק'" title="הקניה וקריאה — אוצר המילים של הפרק">
                 <Stack spacing={1.5}>
                   <WordChips words={lesson.wordArray} />
                   <Typography variant="body2">{lesson.vocabApproach}</Typography>
@@ -431,12 +216,16 @@ export default function UlpanRoadmap() {
                 </Stack>
               </TimeBlock>
 
-              <TimeBlock time="25-40 דק'" title="שילוב פלטפורמת הכיתה — משחק על הלוח החכם">
+              <TimeBlock time="17-27 דק'" title="תרגול משחקי — התאמת זוגות על הלוח">
                 <Stack spacing={1.5}>
+                  <Typography variant="body2" color="text.secondary">
+                    בנגן: משחק זיכרון והתאמה שנטען אוטומטית עם מילות הפרק — התלמידים מתאימים מילה לתמונה.
+                  </Typography>
+                  <Divider />
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                     <SportsEsportsRoundedIcon sx={{ color: CYAN }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      המשחק המומלץ: {lesson.game.gameTitle}
+                      חלופה מהקטלוג: {lesson.game.gameTitle}
                     </Typography>
                     <Button
                       size="small"
@@ -454,10 +243,6 @@ export default function UlpanRoadmap() {
                   <Alert severity="success" sx={{ '& .MuiAlert-message': { fontSize: 14 } }}>
                     <strong>הנחיית הפעלה לפרופיל הזה:</strong> {lesson.game.launchTip}
                   </Alert>
-                  <Divider />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                    {isPasteReady ? 'משפטים מוכנים להזנה למשחק:' : 'מערך המילים המותאם למשחק:'}
-                  </Typography>
                   {isPasteReady ? (
                     <Stack spacing={0.5}>
                       {lesson.pasteSentences.map((s) => (
@@ -477,102 +262,60 @@ export default function UlpanRoadmap() {
                   >
                     {isPasteReady ? 'העתקה להדבקה במשחק' : 'העתקת מערך המילים (JSON)'}
                   </Button>
-                  <Typography variant="caption" color="text.secondary">
-                    ⚠️ עברו למרחב הכיתה כדי להקרין — הקישור נפתח בלשונית חדשה כדי לא להפריע לשולחן העבודה.
-                  </Typography>
                 </Stack>
               </TimeBlock>
 
-              <TimeBlock time="40-45 דק'" title="סגירה ופרידה — טקס הצלחה">
+              <TimeBlock time="27-40 דק'" title="עבודה עצמית — טיימר 13 דקות ודפי עבודה">
+                <Typography variant="body2">{lesson.worksheetGuidance}</Typography>
+              </TimeBlock>
+
+              <TimeBlock time="40-45 דק'" title="סגירה ומשימת אמת — טקס הצלחה">
                 <Typography variant="body2">{lesson.closure}</Typography>
               </TimeBlock>
             </Stack>
           )}
 
-          {/* --- Tab 2: printable worksheet preview ------------------------- */}
+          {/* --- Tab 2: printable materials --------------------------------- */}
           {activeTab === 1 && (
             <Stack spacing={2} sx={{ p: { xs: 2, sm: 3 } }}>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  תצוגה מקדימה — הדף נפתח בחלון חדש, בהיר ומוכן להדפסה על A4.
-                </Typography>
-                <Button variant="contained" startIcon={<PrintRoundedIcon />} onClick={() => printWorksheet(lesson)}>
-                  הדפס דף עבודה 🖨️
-                </Button>
-              </Stack>
-
-              {/* Forced-light preview inside the dark workspace */}
-              <Paper elevation={0} sx={{ bgcolor: '#ffffff', color: '#111827', p: { xs: 2, sm: 4 }, border: '1px solid #e5e7eb' }}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '3px solid #111827', pb: 1.5, flexWrap: 'wrap', gap: 1 }}
-                >
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#111827' }}>
-                      {lesson.chapter.icon} {lesson.chapter.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                      {lesson.chapter.subtitle} · {CONTENT.levels[lesson.profile.level].label}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" sx={{ color: '#111827' }}>
-                    שם: ______________ תאריך: ________
+              <Typography variant="body2" color="text.secondary">
+                חבילת ההדפסה שחור-לבן (חסכונית בדיו) כוללת:
+              </Typography>
+              <Stack component="ul" spacing={0.5} sx={{ m: 0, pr: 2.5 }}>
+                <li>
+                  <Typography variant="body2">
+                    <strong>דף עבודה לתלמיד/ה</strong> — התאמת מילה לתמונה, שורות כתיבה
+                    {lesson.profile.level !== 'level_1' && ' ומסגרות משפט להשלמה'}.
                   </Typography>
-                </Stack>
-
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mt: 3, mb: 1, color: '#111827' }}>
-                  📦 מחסן המילים שלי
-                </Typography>
-                <Stack direction="row" spacing={0} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {lesson.chapter.baseTokens.map((t) => (
-                    <Box key={t.word} sx={{ border: '1.5px solid #d1d5db', borderRadius: 3, px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ fontSize: 22 }}>{t.emoji}</Typography>
-                      <Typography sx={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>{t.word}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mt: 3, mb: 1, color: '#111827' }}>
-                  🖊️ מתאמנים בכתיבה
-                </Typography>
-                {lesson.chapter.baseTokens.slice(0, 3).map((t) => (
-                  <Box key={t.word} sx={{ height: 40, borderBottom: '2px solid #cbd5e1', display: 'flex', alignItems: 'flex-end' }}>
-                    {lesson.profile.level === 'level_1' && (
-                      <Typography sx={{ fontSize: 22, color: '#d1d5db', letterSpacing: 2 }}>{t.word}</Typography>
-                    )}
-                  </Box>
-                ))}
-                <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                  …ובדף המודפס: שורות רחבות לכל המילים, תרגיל התאמת מילה לציור
-                  {lesson.profile.level !== 'level_1' && ' ומסגרות משפט להשלמה'}
-                  .
-                </Typography>
-
-                <Divider sx={{ my: 2, borderColor: '#e5e7eb' }} />
-                <Typography variant="caption" sx={{ color: '#6b7280' }}>
-                  💡 למורה: {lesson.worksheetGuidance}
-                </Typography>
-              </Paper>
+                </li>
+                <li>
+                  <Typography variant="body2">
+                    <strong>🔑 דף תשובות למורה (חסוי)</strong> — בעמוד נפרד, עם הפתרונות מודגשים.
+                  </Typography>
+                </li>
+                <li>
+                  <Typography variant="body2">
+                    <strong>כרטיס יציאה רגשי</strong> — פעמיים בעמוד עם קו גזירה ✂️ (חיסכון בנייר).
+                  </Typography>
+                </li>
+              </Stack>
+              <Button
+                variant="contained"
+                startIcon={<PrintRoundedIcon />}
+                onClick={() => setPrintOpen(true)}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                פתח תצוגת הדפסה 🖨️
+              </Button>
             </Stack>
           )}
 
-          {/* --- Tab 3: real-world mission ticket ---------------------------- */}
+          {/* --- Tab 3: real-world mission ---------------------------------- */}
           {activeTab === 2 && (
             <Stack spacing={2} sx={{ p: { xs: 2, sm: 3 }, alignItems: 'center' }}>
               <Paper
                 variant="outlined"
-                sx={{
-                  p: { xs: 2.5, sm: 4 },
-                  maxWidth: 560,
-                  width: '100%',
-                  border: `2px dashed ${AMBER}`,
-                  position: 'relative',
-                }}
+                sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 560, width: '100%', border: `2px dashed ${AMBER}` }}
               >
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -605,6 +348,14 @@ export default function UlpanRoadmap() {
           )}
         </Paper>
 
+        {playerOpen && <LessonPlayer lesson={lesson} onExit={() => setPlayerOpen(false)} />}
+        <PrintDocDialog
+          docs={[buildUlpanWorksheetDoc(lesson), buildUlpanExitTicketDoc(lesson)]}
+          open={printOpen}
+          onClose={() => setPrintOpen(false)}
+          title={`🖨️ חומרי הלימוד — ${lesson.chapter.title}`}
+        />
+
         <Snackbar
           open={copied}
           autoHideDuration={2500}
@@ -623,10 +374,10 @@ export default function UlpanRoadmap() {
         <SchoolRoundedIcon sx={{ fontSize: 40, color: CYAN }} />
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            מחולל האולפן הדינמי לעולים חדשים
+            מחולל האולפן הדינמי ונגן השיעורים
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            מפת דרכים בת 10 פרקים ללימוד עברית כשפה שנייה — בחרו פרק, כווננו פרופיל תלמיד, וקבלו מערך שלם.
+            מפת דרכים בת 10 פרקים ללימוד עברית כשפה שנייה — בחרו פרק, כווננו פרופיל תלמיד, וקבלו מערך שלם + נגן שיעורים ללוח החכם.
           </Typography>
         </Box>
       </Stack>
@@ -643,11 +394,7 @@ export default function UlpanRoadmap() {
 
       {/* Optional class selection — enables progress tracking only */}
       <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}
-        >
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
             מעקב התקדמות לכיתה:
           </Typography>
@@ -674,7 +421,7 @@ export default function UlpanRoadmap() {
         </Stack>
       </Paper>
 
-      {/* The 10-chapter roadmap, grouped by phase */}
+      {/* The 10-chapter roadmap, grouped by phase — a vertical timeline */}
       {PHASES.map((phase, phaseIdx) => (
         <Box key={phase.key}>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'baseline', mb: 0.5 }}>
@@ -703,7 +450,6 @@ export default function UlpanRoadmap() {
                   }}
                 >
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                    {/* Number bubble */}
                     <Box
                       sx={{
                         width: 40,
@@ -788,7 +534,7 @@ export default function UlpanRoadmap() {
               </IconButton>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              כווננו את פרופיל התלמיד — והמחולל יתפור מערך שיעור, דף תרגול ומשימה בדיוק למידותיו.
+              כווננו את פרופיל התלמיד — והמחולל יתפור מערך שיעור, נגן ללוח וחומרי הדפסה בדיוק למידותיו.
             </Typography>
             <WordChips words={drawerChapter.baseTokens.map((t) => t.word)} />
             <Divider />
@@ -811,9 +557,7 @@ export default function UlpanRoadmap() {
               select
               label="שפת אם"
               value={profile.nativeLanguage}
-              onChange={(e) =>
-                setProfile((p) => ({ ...p, nativeLanguage: e.target.value as NativeLangKey }))
-              }
+              onChange={(e) => setProfile((p) => ({ ...p, nativeLanguage: e.target.value as NativeLangKey }))}
               fullWidth
             >
               {(Object.keys(CONTENT.nativeLanguages) as NativeLangKey[]).map((k) => (
@@ -838,7 +582,7 @@ export default function UlpanRoadmap() {
             </TextField>
 
             <Button variant="contained" size="large" onClick={generate} sx={{ fontWeight: 800 }}>
-              📝 גנרט מערך שיעור מותאם אישית
+              🪄 גנרט שיעור והדפס חומרים
             </Button>
           </Stack>
         )}

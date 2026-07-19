@@ -4,6 +4,7 @@ import ChatRoundedIcon from '@mui/icons-material/ChatRounded';
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
 import ExploreRoundedIcon from '@mui/icons-material/ExploreRounded';
 import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -13,6 +14,7 @@ const TEAL = '#4db6ac';
 const VIOLET = '#9575cd';
 const ROSE = '#e57373';
 const CYAN = '#4dd0e1';
+const AMBER = '#fbbf24';
 
 interface OfficeTool {
   title: string;
@@ -61,6 +63,14 @@ const TOOLS: OfficeTool[] = [
     icon: SchoolRoundedIcon,
     to: '/teacher-workspace/ulpan-generator',
     accent: CYAN,
+  },
+  {
+    title: 'שיעור פיילוט: אולפן פרק 1',
+    description:
+      'אב-טיפוס באיכות גבוהה לשיעור "תעודת הזהות שלי" — נגן 5 שלבים ללוח החכם עם ניקוד מלא, דיאלוג, עריכה חיה ודף מלווה חסכוני בדיו.',
+    icon: ScienceRoundedIcon,
+    to: '/teacher-workspace/ulpan-pilot',
+    accent: AMBER,
   },
 ];
 

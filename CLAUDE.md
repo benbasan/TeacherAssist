@@ -37,6 +37,12 @@ can open and run in front of a class within seconds.
   their `componentName`. Display labels/icons/colors for `subject`/`targetAge` live in
   `src/data/taxonomy.ts`, not on each entry.
 - A `componentName` maps to a React component via the **Registry Map** in `src/pages/GamePage.tsx`.
+- **Print & Play (דף מלווה לשיעור):** a game may declare an optional
+  `printableInfo: { supported, type: "academic_worksheet" | "social_exit_ticket" | "none" }` in the
+  registry. When supported, `GameWrapper` shows a print button; the printable A4 document is built by
+  a per-game **print adapter** in `src/data/printAdapters.ts` from the game's existing content JSON
+  (never from component state). Exit-ticket reflection questions live in
+  `src/data/content/print-exit-ticket-content.json` (age-cohort schema). See `ARCHITECTURE.md` §13.
 - **Any new game MUST be added to BOTH** `games-registry.json` **and** `src/data/whats-new.json`.
 - Pages render purely from this data — never hard-code a game list in a component.
 - **See `ARCHITECTURE.md`** for the full system blueprint: the application shell, dynamic routing,

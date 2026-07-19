@@ -6,7 +6,11 @@
     "targetAge": "elementary_low",
     "subject": "social",
     "estimatedTimeMinutes": 20,
-    "componentName": "ComplimentGamePack"
+    "componentName": "ComplimentGamePack",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "math-codebreaker",
@@ -24,7 +28,11 @@
     "targetAge": "elementary_high",
     "subject": "social",
     "estimatedTimeMinutes": 20,
-    "componentName": "SocialDilemmas"
+    "componentName": "SocialDilemmas",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "focus-detectives",
@@ -42,7 +50,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 12,
-    "componentName": "SpotTheGlitch"
+    "componentName": "SpotTheGlitch",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "english-word-pop",
@@ -51,7 +63,11 @@
     "targetAge": "elementary_high",
     "subject": "english",
     "estimatedTimeMinutes": 7,
-    "componentName": "WordPop"
+    "componentName": "WordPop",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "compliment-time-bomb",
@@ -60,7 +76,11 @@
     "targetAge": "elementary_high",
     "subject": "social",
     "estimatedTimeMinutes": 10,
-    "componentName": "ComplimentTimeBomb"
+    "componentName": "ComplimentTimeBomb",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "silent-ninja",
@@ -78,7 +98,11 @@
     "targetAge": "middle",
     "subject": "social",
     "estimatedTimeMinutes": 15,
-    "componentName": "WouldYouRather"
+    "componentName": "WouldYouRather",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "two-truths-lie",
@@ -87,7 +111,11 @@
     "targetAge": "elementary_high",
     "subject": "social",
     "estimatedTimeMinutes": 10,
-    "componentName": "TwoTruthsLie"
+    "componentName": "TwoTruthsLie",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "mind-readers",
@@ -96,7 +124,11 @@
     "targetAge": "elementary_high",
     "subject": "social",
     "estimatedTimeMinutes": 12,
-    "componentName": "MindReaders"
+    "componentName": "MindReaders",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "emotion-generator",
@@ -105,7 +137,11 @@
     "targetAge": "elementary_low",
     "subject": "social",
     "estimatedTimeMinutes": 10,
-    "componentName": "EmotionGenerator"
+    "componentName": "EmotionGenerator",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "silent-sync-tower",
@@ -123,7 +159,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 7,
-    "componentName": "RhymeExpress"
+    "componentName": "RhymeExpress",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "punctuation-orchestra",
@@ -132,7 +172,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 10,
-    "componentName": "PunctuationOrchestra"
+    "componentName": "PunctuationOrchestra",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "letter-bridge",
@@ -141,7 +185,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 8,
-    "componentName": "LetterBridge"
+    "componentName": "LetterBridge",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "sentence-detectives",
@@ -150,7 +198,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 10,
-    "componentName": "SentenceDetectives"
+    "componentName": "SentenceDetectives",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "hungry-word-monster",
@@ -159,7 +211,11 @@
     "targetAge": "elementary_low",
     "subject": "hebrew",
     "estimatedTimeMinutes": 8,
-    "componentName": "HungryWordMonster"
+    "componentName": "HungryWordMonster",
+    "printableInfo": {
+      "supported": true,
+      "type": "academic_worksheet"
+    }
   },
   {
     "id": "digital-pass-parcel",
@@ -168,7 +224,11 @@
     "targetAge": "elementary_low",
     "subject": "social",
     "estimatedTimeMinutes": 15,
-    "componentName": "DigitalPassParcel"
+    "componentName": "DigitalPassParcel",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "social-reflection-walk",
@@ -177,7 +237,11 @@
     "targetAge": "elementary_high",
     "subject": "social",
     "estimatedTimeMinutes": 15,
-    "componentName": "StepByStepReflection"
+    "componentName": "StepByStepReflection",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "social-speed-dating",
@@ -186,7 +250,11 @@
     "targetAge": "elementary_high_and_junior_high",
     "subject": "social",
     "estimatedTimeMinutes": 12,
-    "componentName": "ClassroomSpeedDating"
+    "componentName": "ClassroomSpeedDating",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   },
   {
     "id": "social-rumor-express",
@@ -195,6 +263,10 @@
     "targetAge": "elementary_to_high",
     "subject": "social",
     "estimatedTimeMinutes": 15,
-    "componentName": "RumorExpress"
+    "componentName": "RumorExpress",
+    "printableInfo": {
+      "supported": true,
+      "type": "social_exit_ticket"
+    }
   }
 ]

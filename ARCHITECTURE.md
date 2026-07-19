@@ -37,6 +37,15 @@ Entry: `index.html` (`<html lang="he" dir="rtl">`) → `src/main.tsx` → `src/A
 src/
 ├── App.tsx                     # Application shell: providers + router (route table)
 ├── main.tsx                    # React root render
+├── components/
+│   ├── PrintTemplate.tsx       # Print & Play: pure B&W A4 renderer for a PrintableDoc (student sheet / answer key / exit ticket; §13)
+│   ├── PrintPreviewDialog.tsx  # Print & Play: game preview modal + cohort toggle + #print-mount body portal + window.print() (§13)
+│   ├── PrintDocDialog.tsx      # Print & Play: lean dialog for PREBUILT PrintableDoc[] (no EducationalGame coupling) — used by the Ulpan player (§13/§10)
+│   ├── LessonPlayer.tsx        # Ulpan Accelerator: full-screen 5-stage smartboard lesson player overlay (§10)
+│   ├── MemoryMatch.tsx         # Ulpan Accelerator: in-slide emoji↔word matching-pairs drill, fed the lesson vocab (§10)
+│   ├── OddOneOut.tsx           # Ulpan Pilot: in-slide "אחד בחוץ" gender-syntax drill (rounds of 4 vowelized frames) (§10)
+│   ├── UlpanPilotPlayer.tsx    # Ulpan Pilot: standalone hardcoded 5-stage Chapter-1 player (3-tab instruction, passport builder, dual games) (§10)
+│   └── UlpanPilotPrintDialog.tsx # Ulpan Pilot: bespoke single-A4 ink-saver sheet (tracing lines + ✂️ cut + exit ticket) via #print-mount (§10/§13)
 ├── components/layout/
 │   ├── AppLayout.tsx           # Shell: Navbar + AttendanceDrawer + <Outlet/>; owns drawer open state
 │   ├── Navbar.tsx              # Sticky AppBar; nav links + Clerk auth + active-class widget + attendance toggle
@@ -55,6 +64,10 @@ src/
 │   ├── whats-new.json          # SOURCE OF TRUTH: "What's New" timeline entries (games only)
 │   ├── taxonomy.ts             # subject/targetAge → Hebrew labels + icon/color (catalog visuals)
 │   ├── lessonItems.ts          # Playlist resolver: game/tool id → {title,icon,Component} (§12)
+│   ├── printAdapters.ts        # Print & Play adapter registry: gameId → build(cohort) → PrintableDoc (§13)
+│   ├── ulpanLesson.ts          # Ulpan Accelerator: shared types + pure buildLessonPlan(chapter,profile) engine (§10)
+│   ├── ulpanPrint.ts           # Ulpan Accelerator: GeneratedLesson → PrintableDoc (worksheet + exit ticket) (§10/§13)
+│   ├── ulpanPilotContent.ts    # Ulpan Pilot: hardcoded, fully-vowelized Chapter-1 content (dialogue, drill matrix, tips) (§10)
 │   └── content/                # Externalized game text pools, one per game (§11); also the brain-break tool pool
 │       ├── brain-break-content.json         # BrainBreak tool: flat pool of 40+ exercises keyed by category (energize/calm), NOT age cohort (§9)
 │       ├── social-speed-dating-content.json # ClassroomSpeedDating: age-cohort prompt packs + wrap-ups
@@ -65,6 +78,7 @@ src/
 │       ├── hungry-word-monster-content.json  # HungryWordMonster: 2 elementary cohorts of phonics/category focus sets
 │       ├── letter-bridge-content.json        # LetterBridge: age-cohort homophone letter-pair word planks
 │       ├── mind-readers-content.json         # MindReaders: age-cohort 3-option "what did they pick" questions
+│       ├── print-exit-ticket-content.json     # Print & Play: age-cohort SEL exit-ticket reflection pool (mood prompt + open questions; §13)
 │       ├── punctuation-orchestra-content.json # PunctuationOrchestra: age-cohort readable sentence pool
 │       ├── rhyme-express-content.json         # RhymeExpress: 2 elementary cohorts of rhyme rounds
 │       ├── social-rumor-express-content.json  # RumorExpress: age-cohort story tiers (stories+facts) + reflection cards
@@ -75,8 +89,8 @@ src/
 │       ├── spot-the-glitch-content.json       # SpotTheGlitch: age-cohort language-error topics (grammar/spelling/idioms)
 │       ├── social-reflection-walk-content.json # StepByStepReflection: age-cohort SEL forward/backward statements + debrief cards
 │       ├── two-truths-lie-content.json         # TwoTruthsLie: age-cohort example fact-set "inspiration bank"
-│       ├── ulpan-chapters.json                 # UlpanRoadmap tool: the fixed 10-chapter SLA roadmap (3 phases → chapters → baseTokens) (§10)
-│       ├── ulpan-generator-content.json        # UlpanRoadmap tool: lesson-generation corpus (warm-ups ×cohort, contrastive notes ×language, missions ×level…) (§10)
+│       ├── ulpan-chapters.json                 # Ulpan Accelerator: the fixed 10-chapter SLA roadmap (3 phases → chapters → baseTokens) (§10)
+│       ├── ulpan-generator-content.json        # Ulpan Accelerator: lesson-generation corpus (warm-ups ×cohort, contrastive notes ×language, missions ×level…) (§10)
 │       ├── english-word-pop-content.json       # WordPop: age-cohort English→Hebrew vocab categories
 │       └── would-you-rather-content.json       # WouldYouRather: age-cohort "this-or-that" dilemma packs
 ├── games/
@@ -116,7 +130,8 @@ src/
 │   ├── CommunicationGenerator.tsx # WhatsApp summary generator + sent-message archive (§10)
 │   ├── LessonBuilder.tsx       # "אדריכל השיעור": build ordered game/tool playlists per class (§12)
 │   ├── SocialMapperDashboard.tsx # "מצפן חברתי": sociometric analytics — network map + climate alerts + matchmaker (§10)
-│   └── UlpanRoadmap.tsx        # "מחולל האולפן הדינמי": 10-chapter SLA roadmap → profile-tailored lesson/worksheet/mission generator (§10)
+│   ├── UlpanWorkspace.tsx      # "מחולל האולפן הדינמי ונגן השיעורים": roadmap + profile → lesson generator + 5-stage LessonPlayer launch (§10)
+│   └── UlpanPilot.tsx          # "שיעור פיילוט": standalone high-fidelity Chapter-1 prototype (intro + profile + UlpanPilotPlayer launch) (§10)
 ├── pages/
 │   ├── HomePage.tsx            # Landing gateway at "/": split-screen → /classroom | /teacher-workspace (§3)
 │   ├── ClassroomWorkspacePage.tsx # מרחב הכיתה hub at /classroom: games catalog (subject + cohort ToggleButton filters) + STATIC utilities section (§3/§9)
@@ -132,7 +147,8 @@ src/
 │   ├── corporateTheme.ts       # Dark navy/slate theme for מרחב המורה (nested ThemeProvider; §10)
 │   └── rtlCache.ts             # Emotion cache for RTL CSS (key "muirtl")
 └── types/
-    ├── game.types.ts           # EducationalGame, WhatsNewEntry, Classroom, LessonPlaylist contracts
+    ├── game.types.ts           # EducationalGame (+ PrintableInfo), WhatsNewEntry, Classroom, LessonPlaylist contracts
+    ├── print.types.ts          # Print & Play contracts: PrintableDoc, PrintSection, PrintAdapter (§13)
     └── tool.types.ts           # ClassroomTool contract (utilities; §9)
 ```
 
@@ -164,7 +180,8 @@ src/
                   "whatsapp-generator"→ <CommunicationGenerator/>   // parent summary + archive
                   "lesson-builder"    → <LessonBuilder/>            // Session Builder / אדריכל השיעור (§12)
                   "social-mapper"     → <SocialMapperDashboard/>    // Social Compass sociometric analytics (§10)
-                  "ulpan-generator"   → <UlpanRoadmap/>             // Ulpan Accelerator: SLA lesson generator (§10)
+                  "ulpan-generator"   → <UlpanWorkspace/>           // Ulpan Accelerator: SLA lesson generator + 5-stage player (§10)
+                  "ulpan-pilot"       → <UlpanPilot/>               // Ulpan Pilot: hardcoded high-fidelity Chapter-1 prototype (§10)
               "/dashboard"     → <DashboardPage />   // ungated: a class-less teacher can still reach it
               "/whats-new"     → <WhatsNewPage />
               "*"              → <Navigate to="/" replace />   // unknown path → gateway
@@ -349,7 +366,9 @@ hook (§7). English text is wrapped in `dir="ltr"` inside the RTL shell. Uses th
 
 Type contracts in `src/types/game.types.ts`:
 - **`EducationalGame`** — `id`, `title`, `description`, `targetAge`, `subject`,
-  `estimatedTimeMinutes`, `componentName`.
+  `estimatedTimeMinutes`, `componentName`, plus the optional Print & Play field
+  `printableInfo?: { supported: boolean; type: 'academic_worksheet' | 'social_exit_ticket' | 'none' }`
+  (omitted entirely for games with no printable value; §13).
 - **`WhatsNewEntry`** — `id`, `date`, `title`, `shortDescription`, `gameId?`.
 - **`Classroom`** — `id`, `name`, `students: string[]`, `playedGames: string[]`, plus the Marble Jar
   fields `marblesCount: number` (0), `marblesTarget: number` (30), `marblesReward: string`
@@ -663,28 +682,63 @@ workspaces.** A silent sociometric survey that detects loneliness/isolation. It 
   "הערת מחנך" reminding the teacher to apply everything indirectly and never share the map with children/
   parents. **Not** a `/tools` utility or catalog game — no registry/whats-new entries.
 
-**Fifth tool — `UlpanRoadmap.tsx` ("מחולל האולפן הדינמי לעולים חדשים"), the Ulpan Accelerator at
-`/teacher-workspace/ulpan-generator`:** an SLA (Second Language Acquisition) lesson architect for
-teaching Hebrew to new-immigrant students. A fixed **10-chapter pedagogical roadmap** (3 phases:
+**Fifth tool — `UlpanWorkspace.tsx` ("מחולל האולפן הדינמי ונגן השיעורים המאוחד"), the Ulpan
+Accelerator at `/teacher-workspace/ulpan-generator`:** an SLA (Second Language Acquisition) lesson
+architect for teaching Hebrew to new-immigrant students, split into two layers — a personalization
+**"Brain"** (the workspace) and a full-screen smartboard **"Screen"** (the 5-stage `LessonPlayer`).
+
+*The Brain (`UlpanWorkspace.tsx`).* A fixed **10-chapter pedagogical roadmap** (3 phases:
 הישרדות וביטחון → המרחב החברתי → העמקה רגשית ותיאורית) renders as a clean RTL vertical timeline
 grouped by phase (`data/content/ulpan-chapters.json`: `phases → chapters → {id, title, subtitle,
 icon, baseTokens[{word, emoji}]}`). Clicking a chapter opens a right-anchored **profile drawer**
 (3 `Select`s: age cohort — the standard §11 keys / native language — english·russian·french·spanish·
-other / level — 1 אפס עברית·2 הישרדותית·3 תקשורת בסיסית) whose "גנרט מערך שיעור" button runs
-`buildLessonPlan(chapter, profile)` — a **pure deterministic template engine** (no backend/LLM) that
-composes `data/content/ulpan-generator-content.json` (warm-ups keyed chapter×cohort, contrastive
-notes keyed globally per native language with an optional `chapters` filter, level guidance written
-once per level, missions keyed chapter×level; vocabulary is **derived**: level 1 = `baseTokens`,
-level 2/3 add `expansionTokens` tiers). Output renders in 3 tabs: **🕒 מערך 45 דק'** (warm-up /
-vocabulary+contrastive Alerts / a **smartboard-game interlock** that names a real games-registry game
-per chapter with a profile-customized word array + copy-JSON button and a `/game/:id` link opened in
-a new tab / closure), **📄 דף תרגול** (a forced-light on-screen preview + `printWorksheet` — opens a
-standalone light `<html dir="rtl">` document in a new window with `@page` A4 rules and auto
-`window.print()`, escaping the dark corporate theme), and **🚀 משימת עולם אמיתי** (a ticket-styled
-corridor micro-challenge). Same **local session-decoupled class selection** as the other tools;
-choosing a class is *optional* and only enables the per-chapter "הושלם"/"טרם נלמד" progress toggle,
-persisted via `ulpanCompletedChapters` + `toggleUlpanChapter` (§7). **Not** a `/tools` utility or
-catalog game — no registry/whats-new entries.
+other / level — 1 אפס עברית·2 הישרדותית·3 תקשורת בסיסית) whose "🪄 גנרט שיעור והדפס חומרים" button runs
+`buildLessonPlan(chapter, profile)` — a **pure deterministic template engine** (no backend/LLM),
+extracted into the shared `src/data/ulpanLesson.ts` so both the workspace and the player import the
+same generator. It composes `data/content/ulpan-generator-content.json` (warm-ups keyed
+chapter×cohort, contrastive notes keyed globally per native language with an optional `chapters`
+filter, level guidance per level, missions keyed chapter×level; vocabulary is **derived**: level 1 =
+`baseTokens`, level 2/3 add `expansionTokens` tiers). The generated-lesson dashboard shows the 45-min
+plan / smartboard-game interlock / real-world mission, plus two primary actions:
+**"🚀 הפעל שיעור על הלוח החכם"** (mounts the `LessonPlayer` overlay) and print buttons that open
+`PrintDocDialog` (the §13 ink-saver engine) with a prebuilt worksheet + exit-ticket doc.
+
+*The Screen (`components/LessonPlayer.tsx`).* A **fixed full-viewport overlay** (`position:fixed`,
+`inset:0`, `zIndex` above the modal layer) that nests a bright `educationalTheme` + `ScopedCssBaseline`
+over the dark workspace and **covers the navbar + privacy banner** — the required "hide the app shell
+during playback" (best-effort `requestFullscreen()` too). It steps through **exactly 5 linear slides**
+via a bottom RTL nav (הבא/חזור) + a 1–5 step bar: **1 הַקֶּרֶס** (age-matched warm-up hook),
+**2 הַקְנָיָה** (massive vocab grid with per-token Web-Speech TTS `he-IL` speaker buttons +
+contrastive SLA alerts), **3 תִּרְגּוּל מִשְׂחָקִי** (`<MemoryMatch>` fed the chapter's emoji↔word
+pairs), **4 עֲבוֹדָה עַצְמִאִית** (a 13:00 radial countdown with play/pause + ambient-sound toggle +
+a print link), **5 מְשִׂימַת אֱמֶת** (the celebratory real-world mission). `MemoryMatch.tsx` is a
+self-contained matching-pairs drill (own state, ref-cleaned timers, confetti + Web-Audio chime).
+
+Same **local session-decoupled class selection** as the other tools; choosing a class is *optional*
+and only enables the per-chapter "הושלם"/"טרם נלמד" progress toggle, persisted via
+`ulpanCompletedChapters` + `toggleUlpanChapter` (§7). **Not** a `/tools` utility or catalog game — no
+registry/whats-new entries.
+
+**Ulpan Pilot (`UlpanPilot.tsx`, "שיעור פיילוט", `/teacher-workspace/ulpan-pilot`).** A **standalone,
+hand-crafted prototype** of a single lesson — "פרק 1: תעודת הזהות שלי" — built to stress-test niqqud
+accuracy, contextual dialogue, and smartboard pacing *before* the generic engine scales that depth.
+Deliberately separate from `UlpanWorkspace`: all content is **hardcoded and 100% vowelized** in
+`data/ulpanPilotContent.ts` (fidelity over the data-driven generator), so experiments here never
+touch production. An intro + display-only profile card launches `components/UlpanPilotPlayer.tsx` —
+the same full-screen fixed-overlay pattern as `LessonPlayer` (nested bright `educationalTheme`,
+`requestFullscreen`, hides the shell) but with 5 deep, bespoke Chapter-1 stages: **(1)** a hook over a
+CSP-safe layered "hallway" scene + collapsible teacher tip; **(2)** a 3-tab deep-instruction stage —
+the Daniel/Lina **dialogue** (per-line TTS + the "ערוך טקסט" inline editor), click-to-flip
+**vocabulary cards** (front = vowelized word + icon, back = EN/RU context + usage example), and an
+interactive **gender grid** (`מַלְכֹּדֶת הַדִּקְדּוּק`) where the teacher files student-name chips under
+בֶּן/בַּת; **(3)** an interactive **passport builder** with live `TextField` blanks + a בֶּן/בַּת toggle
+and a spoken read-back line; **(4)** a **dual game rotation** — `MemoryMatch` (vocab) then `OddOneOut`
+(`components/OddOneOut.tsx`, gender-syntax "אחד בחוץ" rounds); **(5)** a **13:00** deep-work timer +
+ambient-sound toggle + a bespoke **4-part "Premium Edition" ink-saver worksheet**
+(`UlpanPilotPrintDialog` → matching + word-hunt · syntax scramble · cloze-with-word-bank · creative
+passport · ✂️ exit ticket) reusing the `#print-mount` + `@media print` infra (§13). All content lives
+vowelized in `data/ulpanPilotContent.ts`. A bottom RTL dock (⬅️ חזור / 1→5 / ➡️ הכלים הבאים) paces the
+flow. Clerk-gated by the workspace layout; no registry/whats-new entries.
 
 **Adding a workspace tool:** create it under `src/teacher-tools/`, add a child route under
 `/teacher-workspace`, and add a card to `TeacherWorkspacePage` (give it a `to` — the card auto-enables
@@ -963,6 +1017,73 @@ finish/close actions dismiss the modal instead of navigating.
 **Entry points.** `TeacherWorkspacePage` — the formerly-"בקרוב" **אדריכל השיעור** card now links to
 `/teacher-workspace/lesson-builder`. `ClassroomWorkspacePage` — a header **"📅 טען מערך שיעור מוכן"**
 button opens a `Dialog` of the active class's `savedPlaylists`; selecting one navigates to the player.
+
+---
+
+## 13. Print & Play (דף מלווה לשיעור)
+
+A one-click paper companion for the digital games: from inside a running game, the teacher prints a
+**strictly black-and-white A4 document** built from the game's existing content JSON — with zero
+changes to any game component.
+
+**Registry contract.** A game opts in via the optional
+`printableInfo?: { supported: boolean; type: 'academic_worksheet' | 'social_exit_ticket' | 'none' }`
+field on its `games-registry.json` entry (`PrintableInfo` in `src/types/game.types.ts`). Knowledge
+games (Hebrew/English drills) declare `academic_worksheet`; social/SEL games declare
+`social_exit_ticket`; utilities/brain-breaks **omit the field** (`'none'` is reserved for future
+explicit opt-outs). `GameWrapper` renders the "הדפס דף מלווה לשיעור" button only when
+`printableInfo?.supported`.
+
+**Adapter registry (`src/data/printAdapters.ts`).** The bridge between a game and its printable
+document mirrors the `REGISTRY_MAP` decoupling idea: `PRINT_ADAPTERS: Record<gameId, PrintAdapter>`
+where `PrintAdapter = { cohorts: CohortKey[]; build(cohort) → PrintableDoc }`. Adapters import the
+game's content JSON directly (spot-the-glitch → `fix` items, english-word-pop → `match` + `circle`,
+sentence-detectives → `reorder`, letter-bridge → `cloze`, rhyme-express / hungry-word-monster →
+`circle`, punctuation-orchestra → `circle` + `open`), sampling a fresh randomized subset per call —
+calling `build` again *is* the reshuffle. Social games don't need per-game adapters: a shared
+`buildExitTicket(cohort, gameTitle)` draws the cohort's mood prompt + 2 open reflection questions
+from `src/data/content/print-exit-ticket-content.json` (a §11-style age-cohort pool, 40+ items).
+
+**`PrintableDoc` (`src/types/print.types.ts`)** is a discriminated union:
+`{ kind: 'academic', sections: PrintSection[] }` or `{ kind: 'exit_ticket', questions:
+ExitTicketQuestion[] }`. `PrintSection` is itself a union over six generic layouts (`match` /
+`cloze` / `circle` / `fix` / `reorder` / `open`); every layout carries its own answers, so the
+teacher answer key ("🔑 דף תשובות למורה — חסוי") is the **same sections rendered in `mode: 'key'`**
+— no parallel answer type. Exit tickets render the ticket block **twice** on one A4 with a dashed
+"✂️ גזור כאן" cut line (50% paper saver).
+
+**Rendering & print mechanics.** `PrintPreviewDialog` (opened from `GameWrapper`) owns the cohort
+`ToggleButtonGroup` (options = the adapter's `cohorts`, default derived via
+`cohortsForTargetAge(game.targetAge)`), a reshuffle button, and renders the built doc **twice**: an
+on-screen preview inside the `Dialog`, and a `createPortal` copy into a `div#print-mount` appended
+to `document.body` while the dialog is open. Printing is a plain `window.print()` with the dialog
+**kept open** (closing first would race MUI's exit transition + body-style restoration against the
+synchronous print dialog). Global CSS in `src/index.css` does the swap:
+
+```css
+#print-mount { display: none; }                     /* invisible on screen */
+@page { size: A4; margin: 12mm; }
+@media print {
+  html, body { overflow: visible !important; height: auto !important; }  /* MUI Modal sets body overflow:hidden → 1-page bug */
+  body > *:not(#print-mount) { display: none !important; }  /* hides #root, .MuiModal-root, Clerk portals, confetti canvases */
+  #print-mount { display: block !important; }
+}
+```
+
+Why these choices: `display` (not `visibility`) so `#root`/the fixed modal leave no blank first
+page; the `:not()` selector future-proofs against unknown body portals; the print CSS lives in
+**plain `index.css`, outside the Emotion pipeline**, so `stylis-plugin-rtl` can never flip it;
+`PrintTemplate` hard-codes `#fff`/`#000`/Rubik (ink-saver: thin outline borders only, no fills, no
+dark headers) so it is immune to theme drift and the dark-scheme variables in `index.css`.
+Bidi caveat: cloze templates (`"?רנב"`, `"ש?ון"`) are `split('?')` and interleaved with an
+inline-block dotted blank — the literal `?` (a bidi-neutral char) is never printed, so blanks sit
+at the correct position inside RTL words. Page breaks are dual-written (`breakAfter` +
+legacy `pageBreakAfter`) between the student sheet and the answer key, with `breakInside: 'avoid'`
+per item block.
+
+**Adding printability to a game:** add `printableInfo` to its registry entry; if
+`academic_worksheet`, add one adapter to `PRINT_ADAPTERS` mapping its content JSON onto the six
+layouts (new layouts should be generic, not per-game). `social_exit_ticket` needs no adapter.
 
 ---
 
@@ -1649,3 +1770,109 @@ Append a dated entry here for every significant technical decision.
   it holds at most 10 small ints, far below any metadata concern.
   (7) **Age profile reuses the standard §11 cohort keys** — the brief's three age bands are exactly
   `lower_elementary`/`upper_elementary`/`junior_high_high`; no parallel taxonomy invented.
+- **2026-07-17 — Print & Play (דף מלווה לשיעור): registry-driven printable worksheets & exit
+  tickets (§13).**
+  *Why:* smartboard games left no paper trail — no practice sheet after a knowledge game, no
+  reflection artifact after an SEL activity; teachers asked for a printable companion that is
+  ink-cheap (school printers) and only appears where paper makes pedagogical sense.
+  *How:* an optional `printableInfo` field on registry entries gates a `GameWrapper` print button;
+  `src/data/printAdapters.ts` maps gameId → `build(cohort)` → a `PrintableDoc` union rendered by
+  `components/PrintTemplate.tsx` inside `components/PrintPreviewDialog.tsx`.
+  *Key choices:*
+  (1) **Adapter registry over per-game print code** — same decoupling as `REGISTRY_MAP`: adapters
+  read the game's *existing* content JSON (§11), so no game component changed and content stays the
+  single source of truth. Six generic section layouts (`match`/`cloze`/`circle`/`fix`/`reorder`/
+  `open`) cover all seven academic games; every layout carries its answers, so the teacher key is
+  the same data rendered in `mode: 'key'`.
+  (2) **In-app preview + `#print-mount` portal + `@media print`, not the Ulpan light-window
+  pattern** — the Ulpan generator (2026-07-09, choice 5) prints via `window.open` because it lives
+  in the dark workspace; Print & Play instead needs a live WYSIWYG preview, immunity to popup
+  blockers, and it runs in the light classroom skin. The portal-under-`body` +
+  `body > *:not(#print-mount) { display:none }` rule solves the MUI-portal problem generically
+  (modal, Clerk widgets, confetti canvases) without a hide-list.
+  (3) **Print CSS in plain `index.css`, template colors hard-coded** — keeps the rules outside the
+  Emotion/stylis-RTL pipeline (can't be direction-flipped) and outside the theme (B&W regardless of
+  skin); `display` (not `visibility`) hiding avoids ghost blank pages; body
+  `overflow: visible !important` fixes MUI Modal's `overflow:hidden` one-page print bug; the dialog
+  **stays open** during `window.print()` to avoid racing its exit transition.
+  (4) **Shuffling lives in `build()`, not the renderer** — the doc object is immutable per seed, so
+  the preview and the printed portal are guaranteed identical; "שאלות אחרות" simply rebuilds.
+  (5) **Exit tickets share one §11-style pool** (`print-exit-ticket-content.json`, 40+ items,
+  3 cohorts) instead of per-game adapters — reflection questions are activity-generic; the ticket is
+  duplicated twice per A4 with a ✂️ cut line (50% paper saver).
+  (6) **math-codebreaker excluded from v1** — its riddles are generated in-component (no content
+  JSON); a future generated-arithmetic adapter can add it with one registry line.
+- **2026-07-17 — Ulpan Accelerator rebuilt into a two-layer Brain + 5-stage Lesson Player (§10).**
+  *Why:* the original `UlpanRoadmap.tsx` stopped at a *readable* text plan; teachers needed to
+  actually *run* the 45-minute lesson on the smartboard. We split it into a personalization "Brain"
+  (the workspace) and a full-screen "Screen" (the player), keeping the exact same deterministic,
+  persona-voiced generator.
+  *How:* the pure `buildLessonPlan` engine + all Ulpan types moved to `src/data/ulpanLesson.ts`
+  (shared by workspace + player); `UlpanRoadmap.tsx` → `UlpanWorkspace.tsx`; new
+  `components/LessonPlayer.tsx` (5 slides) + `components/MemoryMatch.tsx`; the route element swapped
+  in `App.tsx` (auth/gating unchanged — the `TeacherWorkspaceLayout` `<SignedIn>` gate already wraps
+  it).
+  *Key choices:*
+  (1) **In-app fixed overlay, not a separate route** — the player receives the generated
+  `GeneratedLesson` object in memory, so no re-serialization through the URL and no regeneration; a
+  max-z fixed overlay covers the navbar/banner for free (the "hide the shell" requirement), with a
+  best-effort `requestFullscreen()` for true kiosk. A route outside `AppLayout` (the
+  `SocialSurveyStudentPage` pattern) would have forced encoding chapter+profile into params and
+  rebuilding the lesson.
+  (2) **Bright nested `educationalTheme` over the dark workspace** — the smartboard surface must be
+  child-legible and vibrant (per CLAUDE.md מרחב הכיתה), so the overlay nests the light classroom
+  theme + `ScopedCssBaseline` instead of inheriting the dark `corporateTheme`. No new theme file
+  invented.
+  (3) **Slide 3 is a purpose-built in-slide `MemoryMatch`, not a registry game** — the spec wants a
+  drill auto-fed the Slide-2 vocabulary; no matching-pairs game exists, and registry games can't
+  ingest arbitrary vocab. A tiny self-contained component keeps the drill on the slide with no
+  navigation. (The corpus's per-chapter recommended game stays available in the workspace dashboard.)
+  (4) **Reuse the §13 Print & Play engine, not the old `window.open` doc** — a new `ulpanPrint.ts`
+  maps the lesson onto the existing `PrintableDoc` layouts, and a lean `PrintDocDialog` (prebuilt
+  `PrintableDoc[]`, no `EducationalGame` coupling) reuses `PrintTemplate` + the `#print-mount` portal
+  + the `@media print` rules. This supersedes `UlpanRoadmap`'s window.open worksheet (2026-07-09
+  choice 5): one ink-saver engine, a live preview, popup-blocker-proof, and it yields the teacher
+  answer-key page + the ✂️ cut-line exit ticket automatically.
+  (5) **Real Web-Speech TTS for the "sound icons"** — the vocab speaker buttons call
+  `speechSynthesis` with `he-IL` (graceful no-op where unavailable), turning the spec's TTS
+  placeholders into a working feature at zero asset cost.
+- **2026-07-18 — Ulpan Pilot: a standalone high-fidelity Chapter-1 prototype (§10,
+  `/teacher-workspace/ulpan-pilot`).**
+  *Why:* before investing in scaling pedagogical depth across all 10 chapters, the team wanted to
+  prove three things the generic data-driven engine can't yet: perfect niqqud on every student-facing
+  word, a contextual dialogue with a live teacher edit safety-net, and real smartboard pacing.
+  *How:* a deliberately **separate** surface (`teacher-tools/UlpanPilot.tsx` + `components/
+  UlpanPilotPlayer.tsx` + `components/UlpanPilotPrintDialog.tsx` + `data/ulpanPilotContent.ts`) so
+  prototype churn never destabilizes the production `UlpanWorkspace`/`LessonPlayer`.
+  *Key choices:*
+  (1) **Hardcoded, fully-vowelized content, not the generator** — the pilot's whole point is
+  fidelity: the exact niqqud strings live in `ulpanPilotContent.ts`, not derived from the corpus.
+  (2) **Reuse the proven infra, rebuild only the stages** — the fixed-overlay + nested bright theme +
+  `requestFullscreen` + `speak()` TTS + `setInterval` timer patterns come straight from `LessonPlayer`;
+  `MemoryMatch` is mounted verbatim for the drill; the `#print-mount` + `@media print` mechanism is
+  reused. Only the 5 stage *views* (dialogue, inline editor, passport drill) are new.
+  (3) **A bespoke single-A4 print sheet, not the generic PrintTemplate** — the spec's single-sheet
+  "tracing lines → ✂️ גזור כאן → exit ticket" layout doesn't match `PrintTemplate`'s multi-page
+  student-sheet + auto answer-key + duplicated-ticket output, so `UlpanPilotPrintDialog` renders a
+  purpose-built sheet with the same ink-saver conventions (hardcoded #000/#555, thin dotted lines, no
+  fills) and the same body-portal print path.
+  (4) **The teacher inline editor ("ערוך טקסט")** — the dialogue lines are React state; the toggle
+  swaps each `Typography` for a `TextField`, letting a teacher correct a word or niqqud live on the
+  board without a code change. This is the pilot's core UX experiment.
+- **2026-07-18 — Ulpan Pilot overhauled into a "fleshy" 45-min lesson (§10).**
+  *Why:* the first pilot proved the 5-stage *shape* but was thin (one dialogue, one short game, a
+  1-part tracing sheet). The team wanted real pedagogical substance to evaluate before scaling.
+  *How:* deepened content in `data/ulpanPilotContent.ts` and rebuilt the stage views in
+  `UlpanPilotPlayer.tsx` (Stage 2 → 3 tabs; Stage 4 → dual game rotation; Stage 5 → 13:00 + ambient);
+  added `components/OddOneOut.tsx`; re-engineered `UlpanPilotPrintDialog.tsx` into a 4-part worksheet.
+  *Key choices:*
+  (1) **Bespoke `OddOneOut`, not a registry game** — no "אחד בחוץ" game exists, and registry games
+  can't ingest arbitrary gender-syntax frames; a tiny self-contained component (mirroring
+  `MemoryMatch`) keeps the drill in-slide and injectable, matching the "dual game rotation" spec.
+  (2) **Word-level hunt grid, not a letter תפזורת** — a conventional letter grid forces bare,
+  unvocalized consonants, which would violate the pilot's hard "100% vowelized" rule. The Part-1 grid
+  therefore places a *whole vowelized word* in every cell; the student circles the targets among
+  distractors. Niqqud integrity wins over the literal letter-grid form.
+  (3) **Still standalone/hardcoded** — the overhaul stays isolated from the production
+  `UlpanWorkspace`/`LessonPlayer`; all depth is added to the pilot's own content + components so
+  experiments never touch the data-driven engine.

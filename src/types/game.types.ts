@@ -3,6 +3,19 @@
 // `src/data/games-registry.json`, and announced via a `WhatsNewEntry` in
 // `src/data/whats-new.json`.
 
+/**
+ * Print & Play (דף מלווה לשיעור) declaration on a registry entry.
+ * `academic_worksheet` → student practice sheet + teacher answer key, built by a
+ * per-game adapter in `src/data/printAdapters.ts` from the game's content JSON.
+ * `social_exit_ticket` → a shared SEL reflection ticket, doubled on one A4.
+ * Games with no printable value omit the field entirely (`'none'` is reserved
+ * for future explicit opt-outs). See ARCHITECTURE.md §13.
+ */
+export interface PrintableInfo {
+  supported: boolean;
+  type: 'academic_worksheet' | 'social_exit_ticket' | 'none';
+}
+
 /** A single educational game, as stored in the games registry. */
 export interface EducationalGame {
   /** Stable unique id, used in the URL (`/game/:gameId`). */
@@ -19,6 +32,8 @@ export interface EducationalGame {
   estimatedTimeMinutes: number;
   /** Key into the Registry Map (GamePage) that resolves the React component. */
   componentName: string;
+  /** Print & Play: printable companion declaration (omitted = not printable). */
+  printableInfo?: PrintableInfo;
 }
 
 /** Sentiment of a pedagogical insight (Teacher's Private Workspace → Student Insights). */

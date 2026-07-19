@@ -109,3 +109,46 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ---------------------------------------------------------------------------
+   Print & Play (דף מלווה לשיעור) — see ARCHITECTURE.md §13.
+   These rules live in plain CSS (outside the Emotion pipeline) on purpose:
+   stylis-plugin-rtl only processes Emotion-emitted styles, so nothing here can
+   ever be direction-flipped. PrintPreviewDialog portals the printable sheet
+   into <div id="print-mount"> under <body>; on screen it is hidden, and in
+   print it is the ONLY visible element.
+--------------------------------------------------------------------------- */
+#print-mount {
+  display: none;
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  /* The open MUI Modal sets body{overflow:hidden} (inline) — a classic
+     "prints only one page" bug in Chrome. Stylesheet !important beats inline. */
+  html,
+  body {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything under body except the print mount: #root, the open
+     .MuiModal-root dialog, Clerk portals, confetti canvases, etc. `display`
+     (not `visibility`) so no hidden box leaves a blank first page. */
+  body > *:not(#print-mount) {
+    display: none !important;
+  }
+  #print-mount {
+    display: block !important;
+    background: #fff;
+    color: #000;
+  }
+}
